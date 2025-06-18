@@ -42,7 +42,8 @@ class _PaymentPageState extends State<PaymentPage> {
     super.initState();
     // Set default payment method if available
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final defaultMethod = context.read<PaymentMethodsProvider>().defaultPaymentMethod;
+      final defaultMethod =
+          context.read<PaymentMethodsProvider>().defaultPaymentMethod;
       if (defaultMethod != null) {
         setState(() {
           selectedPaymentMethod = defaultMethod;
@@ -54,8 +55,10 @@ class _PaymentPageState extends State<PaymentPage> {
   @override
   Widget build(BuildContext context) {
     final cartItems = context.watch<CartProvider>().items;
-    final deliveryAddresses = context.watch<DeliveryAddressesProvider>().addresses;
-    final paymentMethods = context.watch<PaymentMethodsProvider>().paymentMethods;
+    final deliveryAddresses =
+        context.watch<DeliveryAddressesProvider>().addresses;
+    final paymentMethods =
+        context.watch<PaymentMethodsProvider>().paymentMethods;
 
     if (cartItems.isEmpty) {
       return Scaffold(
@@ -185,7 +188,8 @@ class _PaymentPageState extends State<PaymentPage> {
             },
             items: const [
               BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-              BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
+              BottomNavigationBarItem(
+                  icon: Icon(Icons.shopping_cart), label: ''),
               BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
               BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
             ],
@@ -259,9 +263,11 @@ class _PaymentPageState extends State<PaymentPage> {
                   ),
                   const SizedBox(height: 16),
                   _summaryRow('Subtotal', 'PHP ${subtotal.toStringAsFixed(2)}'),
-                  _summaryRow('Shipping Fee', 'PHP ${shippingFee.toStringAsFixed(2)}'),
+                  _summaryRow(
+                      'Shipping Fee', 'PHP ${shippingFee.toStringAsFixed(2)}'),
                   const Divider(height: 32),
-                  _summaryRow('Total', 'PHP ${total.toStringAsFixed(2)}', isTotal: true),
+                  _summaryRow('Total', 'PHP ${total.toStringAsFixed(2)}',
+                      isTotal: true),
                   const SizedBox(height: 24),
                   const Text(
                     'Delivery Method',
@@ -296,7 +302,9 @@ class _PaymentPageState extends State<PaymentPage> {
                             setState(() {
                               selectedDeliveryMethod = 'Delivery';
                               // Set default address if available
-                              selectedAddress = context.read<DeliveryAddressesProvider>().defaultAddress;
+                              selectedAddress = context
+                                  .read<DeliveryAddressesProvider>()
+                                  .defaultAddress;
                             });
                           },
                         ),
@@ -410,7 +418,8 @@ class _PaymentPageState extends State<PaymentPage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.green[50],
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
                                           child: Text(
                                             'Default',
@@ -476,7 +485,8 @@ class _PaymentPageState extends State<PaymentPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const EditPaymentMethodPage(),
+                                  builder: (context) =>
+                                      const EditPaymentMethodPage(),
                                 ),
                               );
                             },
@@ -524,7 +534,8 @@ class _PaymentPageState extends State<PaymentPage> {
                                 const SizedBox(width: 16),
                                 Expanded(
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Text(
                                         method.displayName,
@@ -542,7 +553,8 @@ class _PaymentPageState extends State<PaymentPage> {
                                           ),
                                           decoration: BoxDecoration(
                                             color: Colors.green[50],
-                                            borderRadius: BorderRadius.circular(12),
+                                            borderRadius:
+                                                BorderRadius.circular(12),
                                           ),
                                           child: Text(
                                             'Default',
@@ -560,7 +572,8 @@ class _PaymentPageState extends State<PaymentPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => EditPaymentMethodPage(
+                                        builder: (context) =>
+                                            EditPaymentMethodPage(
                                           paymentMethod: method,
                                         ),
                                       ),
@@ -583,7 +596,8 @@ class _PaymentPageState extends State<PaymentPage> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const EditPaymentMethodPage(),
+                              builder: (context) =>
+                                  const EditPaymentMethodPage(),
                             ),
                           );
                         },
@@ -619,7 +633,8 @@ class _PaymentPageState extends State<PaymentPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: (selectedDeliveryMethod == 'Delivery' && selectedAddress == null) ||
+                      onPressed: (selectedDeliveryMethod == 'Delivery' &&
+                                  selectedAddress == null) ||
                               selectedPaymentMethod == null
                           ? null
                           : () {
@@ -832,7 +847,8 @@ class _PaymentPageState extends State<PaymentPage> {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.deepOrange.withOpacity(0.1) : Colors.grey[50],
+          color:
+              isSelected ? Colors.deepOrange.withOpacity(0.1) : Colors.grey[50],
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected ? Colors.deepOrange : Colors.grey[300]!,
@@ -935,29 +951,32 @@ class _PaymentPageState extends State<PaymentPage> {
       'date': DateTime.now(),
       'status': 'Pending',
       'total': orderTotal,
-      'items': cartItems.map((item) => {
-        'name': item['name'],
-        'quantity': item['quantity'],
-        'price': item['price'],
-        'addons': item['addons'],
-      }).toList(),
+      'items': cartItems
+          .map((item) => {
+                'name': item['name'],
+                'quantity': item['quantity'],
+                'price': item['price'],
+                'addons': item['addons'],
+              })
+          .toList(),
       'deliveryMethod': selectedDeliveryMethod,
-      'deliveryAddress': selectedDeliveryMethod == 'Delivery' ? selectedAddress : null,
+      'deliveryAddress':
+          selectedDeliveryMethod == 'Delivery' ? selectedAddress : null,
       'paymentMethod': selectedPaymentMethod,
       'notes': _notesController.text.isNotEmpty ? _notesController.text : null,
     };
 
     // Add order to history
     context.read<OrderHistoryProvider>().addOrder(
-      date: order['date'] as DateTime,
-      status: order['status'] as String,
-      total: order['total'] as double,
-      items: order['items'] as List<Map<String, dynamic>>,
-      deliveryMethod: order['deliveryMethod'] as String,
-      deliveryAddress: order['deliveryAddress'] as DeliveryAddress?,
-      paymentMethod: order['paymentMethod'] as PaymentMethod,
-      notes: order['notes'] as String?,
-    );
+          date: order['date'] as DateTime,
+          status: order['status'] as String,
+          total: order['total'] as double,
+          items: order['items'] as List<Map<String, dynamic>>,
+          deliveryMethod: order['deliveryMethod'] as String,
+          deliveryAddress: order['deliveryAddress'] as DeliveryAddress?,
+          paymentMethod: order['paymentMethod'] as PaymentMethod,
+          notes: order['notes'] as String?,
+        );
 
     // Show success message
     ScaffoldMessenger.of(context).showSnackBar(
@@ -975,4 +994,4 @@ class _PaymentPageState extends State<PaymentPage> {
       ),
     );
   }
-} 
+}

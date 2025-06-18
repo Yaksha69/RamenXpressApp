@@ -55,7 +55,8 @@ class InvoicePage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _getStatusColor(order['status']).withAlpha((0.08 * 255).toInt()),
+                color: _getStatusColor(order['status'])
+                    .withAlpha((0.08 * 255).toInt()),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
                   color: _getStatusColor(order['status']),
@@ -108,7 +109,8 @@ class InvoicePage extends StatelessWidget {
             _buildInfoRow('Order ID', order['id']),
             _buildInfoRow('Date', dateFormat.format(order['date'])),
             _buildInfoRow('Delivery Method', order['deliveryMethod']),
-            if (order['deliveryMethod'] == 'Delivery' && order['deliveryAddress'] != null)
+            if (order['deliveryMethod'] == 'Delivery' &&
+                order['deliveryAddress'] != null)
               _buildInfoRow(
                 'Delivery Address',
                 order['deliveryAddress'] is DeliveryAddress
@@ -172,7 +174,8 @@ class InvoicePage extends StatelessWidget {
                               fontSize: 14,
                             ),
                           ),
-                          if (item['addons'] != null && (item['addons'] as List).isNotEmpty)
+                          if (item['addons'] != null &&
+                              (item['addons'] as List).isNotEmpty)
                             Padding(
                               padding: const EdgeInsets.only(top: 4),
                               child: Text(
@@ -209,12 +212,16 @@ class InvoicePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildSummaryRow('Subtotal', order['total'] - (order['deliveryMethod'] == 'Delivery' ? 50.0 : 0.0)),
+            _buildSummaryRow(
+                'Subtotal',
+                order['total'] -
+                    (order['deliveryMethod'] == 'Delivery' ? 50.0 : 0.0)),
             if (order['deliveryMethod'] == 'Delivery')
               _buildSummaryRow('Delivery Fee', 50.0),
             const Divider(height: 32, color: Color(0xFF1A1A1A)),
             _buildSummaryRow('Total', order['total'], isTotal: true),
-            if (order['notes'] != null && order['notes'].toString().isNotEmpty) ...[
+            if (order['notes'] != null &&
+                order['notes'].toString().isNotEmpty) ...[
               const SizedBox(height: 24),
               const Text(
                 'Delivery Notes',
@@ -326,4 +333,4 @@ class InvoicePage extends StatelessWidget {
       ),
     );
   }
-} 
+}

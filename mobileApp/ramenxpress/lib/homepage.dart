@@ -76,7 +76,9 @@ class _HomePageState extends State<HomePage> {
     if (selectedCategory == 'All') {
       return menuItems;
     }
-    return menuItems.where((item) => item['category'] == selectedCategory).toList();
+    return menuItems
+        .where((item) => item['category'] == selectedCategory)
+        .toList();
   }
 
   void _showAddOnsModal(BuildContext context, Map<String, dynamic> item) {
@@ -102,7 +104,8 @@ class _HomePageState extends State<HomePage> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+                  borderRadius:
+                      const BorderRadius.vertical(top: Radius.circular(20)),
                   boxShadow: [
                     BoxShadow(
                       color: Color(0xFFD32D43).withAlpha((0.08 * 255).toInt()),
@@ -143,7 +146,8 @@ class _HomePageState extends State<HomePage> {
                         decoration: BoxDecoration(
                           color: Colors.white,
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Color(0xFFD32D43), width: 1),
+                          border:
+                              Border.all(color: Color(0xFFD32D43), width: 1),
                         ),
                         child: Row(
                           children: [
@@ -159,7 +163,8 @@ class _HomePageState extends State<HomePage> {
                                     width: 80,
                                     height: 80,
                                     color: Colors.grey[200],
-                                    child: const Icon(Icons.image_not_supported),
+                                    child:
+                                        const Icon(Icons.image_not_supported),
                                   );
                                 },
                               ),
@@ -203,7 +208,8 @@ class _HomePageState extends State<HomePage> {
                       ),
                       const SizedBox(height: 12),
                       ...(_addOns[item['category']] ?? []).map((addOn) {
-                        bool isSelected = selectedAddOns.any((a) => a['name'] == addOn['name']);
+                        bool isSelected = selectedAddOns
+                            .any((a) => a['name'] == addOn['name']);
                         return Container(
                           margin: const EdgeInsets.only(bottom: 8),
                           decoration: BoxDecoration(
@@ -218,7 +224,8 @@ class _HomePageState extends State<HomePage> {
                                   selectedAddOns.add(addOn);
                                   totalPrice += addOn['price'];
                                 } else {
-                                  selectedAddOns.removeWhere((a) => a['name'] == addOn['name']);
+                                  selectedAddOns.removeWhere(
+                                      (a) => a['name'] == addOn['name']);
                                   totalPrice -= addOn['price'];
                                 }
                               });
@@ -290,7 +297,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                     ElevatedButton(
                       onPressed: () {
-                        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                        final cartProvider =
+                            Provider.of<CartProvider>(context, listen: false);
                         cartProvider.addItem({
                           'name': item['name'] ?? 'Unknown Item',
                           'price': totalPrice,
@@ -308,7 +316,8 @@ class _HomePageState extends State<HomePage> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFD32D43),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 24, vertical: 12),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
@@ -565,7 +574,8 @@ class _HomePageState extends State<HomePage> {
           Container(
             height: 120,
             decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+              borderRadius:
+                  const BorderRadius.vertical(top: Radius.circular(12)),
               image: DecorationImage(
                 image: AssetImage(imagePath),
                 fit: BoxFit.cover,
@@ -639,4 +649,4 @@ class _HomePageState extends State<HomePage> {
       ),
     );
   }
-} 
+}

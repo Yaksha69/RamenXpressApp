@@ -12,8 +12,9 @@ class CartProvider with ChangeNotifier {
   }
 
   void addItem(Map<String, dynamic> item) {
-    final existingItemIndex = _items.indexWhere((i) => i['name'] == item['name']);
-    
+    final existingItemIndex =
+        _items.indexWhere((i) => i['name'] == item['name']);
+
     if (existingItemIndex >= 0) {
       _items[existingItemIndex]['quantity'] += 1;
     } else {
@@ -47,4 +48,4 @@ class CartProvider with ChangeNotifier {
     _items.clear();
     notifyListeners();
   }
-} 
+}

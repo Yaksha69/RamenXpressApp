@@ -5,22 +5,24 @@ const cors = require('cors');
 const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 3000;
 const MONGO_URI = process.env.MONGO_URI;
 
 const InventoryRoutes = require('./routes/InventoryRoutes');
 const MenuRoutes = require('./routes/MenuRoutes');
 const SalesRoutes = require('./routes/SalesRoutes');
 const AuthRoutes = require('./routes/AuthRoutes');
+const OrderRoutes = require('./routes/OrderRoutes');
+const MenuItemRoutes = require('./routes/MenuItemRoutes');
 const { verifyToken, isAdmin, isCashier } = require('./middleware/AuthMiddleware');
 
 const app = express();
 
 // Configure CORS
 app.use(cors({
-    origin: 'http://127.0.0.1:5500', // Frontend origin
-    credentials: true, // Allow credentials
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    origin: '*', // Allow all origins during development
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
@@ -41,7 +43,10 @@ const mapper = '/api/v1';
 app.use(mapper + '/auth', AuthRoutes);
 app.use(mapper + '/inventory', verifyToken, isAdmin, InventoryRoutes);
 app.use(mapper + '/menu', verifyToken, isCashier, MenuRoutes);
-app.use(mapper + '/sales', verifyToken, isCashier, SalesRoutes);
+app.use(mapper + '/menu-items', MenuItemRoutes);
+app.use(mapper + '/sales', verifyToken, isAdmin, SalesRoutes);
+app.use(mapper + '/orders', OrderRoutes);
+
 app.use(mapper + '/upload', require('./routes/UploadRoutes'));
 
 mongoose.connect(MONGO_URI)
