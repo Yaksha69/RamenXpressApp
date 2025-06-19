@@ -1,7 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/cart_provider.dart';
-import 'providers/notifications_provider.dart';
+import 'providers/menu_provider.dart';
+import 'providers/auth_provider.dart';
+import 'providers/profile_provider.dart';
+import 'providers/delivery_addresses_provider.dart';
+import 'providers/payment_methods_provider.dart';
+import 'providers/order_history_provider.dart';
+import 'models/menu_item.dart';
+import 'models/delivery_address.dart';
+import 'models/payment_method.dart';
+import 'payment_page.dart';
+import 'order_history_page.dart';
+import 'profile_page.dart';
+import 'delivery_addresses_page.dart';
+import 'payment_methods_page.dart';
+import 'notifications_page.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -11,456 +25,285 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  String selectedCategory = 'All';
   final TextEditingController _searchController = TextEditingController();
-  String searchQuery = '';
 
-  final List<Map<String, dynamic>> menuItems = [
-    {
-      'name': 'Tonkotsu Ramen',
-      'price': 210.00,
-      'image': 'assets/ramen1.jpg',
-      'category': 'Ramen',
-    },
-    {
-      'name': 'Karaage Ramen',
-      'price': 210.00,
-      'image': 'assets/ramen2.jpg',
-      'category': 'Ramen',
-    },
-    {
-      'name': 'Miso Ramen',
-      'price': 210.00,
-      'image': 'assets/ramen3.jpg',
-      'category': 'Ramen',
-    },
-    {
-      'name': 'Shoyu Ramen',
-      'price': 210.00,
-      'image': 'assets/ramen4.jpg',
-      'category': 'Ramen',
-    },
-    {
-      'name': 'Spicy Ramen',
-      'price': 210.00,
-      'image': 'assets/ramen5.jpg',
-      'category': 'Ramen',
-    },
-  ];
-
-  // Add-ons data
-  final Map<String, List<Map<String, dynamic>>> _addOns = {
-    'Ramen': [
-      {'name': 'Extra Noodles', 'price': 30.0},
-      {'name': 'Extra Chashu', 'price': 50.0},
-      {'name': 'Extra Egg', 'price': 20.0},
-      {'name': 'Extra Vegetables', 'price': 25.0},
-    ],
-    'Rice Bowls': [
-      {'name': 'Extra Rice', 'price': 15.0},
-      {'name': 'Extra Meat', 'price': 40.0},
-      {'name': 'Extra Egg', 'price': 20.0},
-      {'name': 'Extra Sauce', 'price': 10.0},
-    ],
-    'Sides': [
-      {'name': 'Extra Sauce', 'price': 10.0},
-      {'name': 'Extra Portion', 'price': 30.0},
-    ],
-    'Drinks': [
-      {'name': 'Extra Ice', 'price': 0.0},
-      {'name': 'Extra Shot', 'price': 15.0},
-    ],
-  };
-
-  List<Map<String, dynamic>> get filteredMenuItems {
-    if (selectedCategory == 'All') {
-      return menuItems;
-    }
-    return menuItems.where((item) => item['category'] == selectedCategory).toList();
+  @override
+  void initState() {
+    super.initState();
+    // Load menu items when the page initializes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<MenuProvider>(context, listen: false).loadMenuItems();
+    });
   }
 
-  void _showAddOnsModal(BuildContext context, Map<String, dynamic> item) {
-    List<Map<String, dynamic>> selectedAddOns = [];
-    double totalPrice = item['price'] as double;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      enableDrag: true,
-      isDismissible: true,
-      builder: (context) => StatefulBuilder(
-        builder: (context, setState) => Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xFFD32D43).withAlpha((0.08 * 255).toInt()),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                      offset: const Offset(0, 1),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Text(
-                      'Customize Your Order',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
-                      ),
-                    ),
-                    IconButton(
-                      onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close),
-                      color: Color(0xFF1A1A1A),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Item details
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Color(0xFFD32D43), width: 1),
-                        ),
-                        child: Row(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.asset(
-                                item['image'] ?? 'assets/placeholder.png',
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    width: 80,
-                                    height: 80,
-                                    color: Colors.grey[200],
-                                    child: const Icon(Icons.image_not_supported),
-                                  );
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item['name'] ?? 'Unknown Item',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 16,
-                                      color: Color(0xFF1A1A1A),
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    '₱${totalPrice.toStringAsFixed(2)}',
-                                    style: TextStyle(
-                                      color: Color(0xFF1A1A1A),
-                                      fontSize: 14,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      // Add-ons section
-                      Text(
-                        'Add-ons',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A1A),
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      ...(_addOns[item['category']] ?? []).map((addOn) {
-                        bool isSelected = selectedAddOns.any((a) => a['name'] == addOn['name']);
-                        return Container(
-                          margin: const EdgeInsets.only(bottom: 8),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: CheckboxListTile(
-                            value: isSelected,
-                            onChanged: (bool? value) {
-                              setState(() {
-                                if (value == true) {
-                                  selectedAddOns.add(addOn);
-                                  totalPrice += addOn['price'];
-                                } else {
-                                  selectedAddOns.removeWhere((a) => a['name'] == addOn['name']);
-                                  totalPrice -= addOn['price'];
-                                }
-                              });
-                            },
-                            title: Text(
-                              addOn['name'],
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.w500,
-                                color: Color(0xFF1A1A1A),
-                              ),
-                            ),
-                            subtitle: Text(
-                              '₱${addOn['price'].toStringAsFixed(2)}',
-                              style: TextStyle(
-                                color: Color(0xFF1A1A1A),
-                                fontSize: 12,
-                              ),
-                            ),
-                            activeColor: Color(0xFFD32D43),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                    ],
-                  ),
-                ),
-              ),
-              // Bottom action bar
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Color(0xFFD32D43).withAlpha((0.08 * 255).toInt()),
-                      spreadRadius: 1,
-                      blurRadius: 10,
-                      offset: const Offset(0, -1),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Total Price',
-                            style: TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontSize: 12,
-                            ),
-                          ),
-                          Text(
-                            '₱${totalPrice.toStringAsFixed(2)}',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 18,
-                              color: Color(0xFF1A1A1A),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    ElevatedButton(
-                      onPressed: () {
-                        final cartProvider = Provider.of<CartProvider>(context, listen: false);
-                        cartProvider.addItem({
-                          'name': item['name'] ?? 'Unknown Item',
-                          'price': totalPrice,
-                          'image': item['image'] ?? 'assets/placeholder.png',
-                          'quantity': 1,
-                          'addOns': selectedAddOns,
-                        });
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Item added to cart'),
-                            duration: Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFD32D43),
-                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        'Add to Cart',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: const Color(0xFFF5F5F5),
       body: CustomScrollView(
         slivers: [
-          SliverAppBar(
-            floating: true,
-            pinned: true,
-            expandedHeight: 120,
-            backgroundColor: Colors.white,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                color: Colors.white,
-                padding: const EdgeInsets.only(top: 60, left: 16, right: 16),
-                child: Row(
-                  children: [
-                    Text(
-                      'RamenXpress',
-                      style: TextStyle(
-                        color: Color(0xFF1A1A1A),
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const Spacer(),
-                    Stack(
-                      children: [
-                        IconButton(
-                          icon: const Icon(Icons.notifications_outlined),
-                          onPressed: () {
-                            Navigator.pushNamed(context, '/notifications');
-                          },
+          // Welcome Row (no banner)
+          SliverToBoxAdapter(
+            child: Container(
+              padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
+              decoration: const BoxDecoration(
+                color: Color(0xFFD32D43),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 26,
+                    backgroundImage: AssetImage('assets/adminPIC.png'),
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text(
+                          'Welcome Back!',
+                          style: TextStyle(
+                            fontSize: 15,
+                            color: Colors.white70,
+                            fontWeight: FontWeight.w400,
+                          ),
                         ),
-                        Consumer<NotificationsProvider>(
-                          builder: (context, provider, child) {
-                            if (!provider.hasUnread) return const SizedBox();
-                            return Positioned(
-                              right: 8,
-                              top: 8,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: Colors.red,
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                                constraints: const BoxConstraints(
-                                  minWidth: 16,
-                                  minHeight: 16,
-                                ),
-                                child: const Text(
-                                  '',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 10,
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ),
-                            );
-                          },
+                        SizedBox(height: 2),
+                        Text(
+                          'RamenXpress',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
                         ),
                       ],
                     ),
-                    CircleAvatar(
-                      backgroundImage: AssetImage('assets/logo.png'),
-                      radius: 20,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: TextField(
-                controller: _searchController,
-                decoration: InputDecoration(
-                  hintText: 'Search for ramen...',
-                  prefixIcon: const Icon(Icons.search, color: Colors.grey),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(15),
-                    borderSide: BorderSide.none,
                   ),
-                  filled: true,
-                  fillColor: Colors.grey[100],
-                ),
-              ),
-            ),
-          ),
-          SliverToBoxAdapter(
-            child: SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Row(
-                children: [
-                  _categoryChip('All'),
-                  _categoryChip('Ramen'),
-                  _categoryChip('Appetizers'),
-                  _categoryChip('Drinks'),
-                  _categoryChip('Desserts'),
+                  IconButton(
+                    icon: Image.asset('assets/notif.png', width: 40, height: 40),
+                    iconSize: 40,
+                    onPressed: () {
+                      Navigator.pushNamed(context, '/notifications');
+                    },
+                  ),
                 ],
               ),
             ),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                crossAxisCount: 2,
-                mainAxisSpacing: 16,
-                crossAxisSpacing: 16,
-                childAspectRatio: 0.68,
-              ),
-              delegate: SliverChildBuilderDelegate(
-                (context, index) {
-                  final item = filteredMenuItems[index];
-                  return _menuCard(
-                    item['name'],
-                    item['price'] as double,
-                    item['image'],
-                    () {
-                      _showAddOnsModal(context, item);
-                    },
-                  );
-                },
-                childCount: filteredMenuItems.length,
+          // Menu Title
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+              child: Row(
+                children: const [
+                  Text(
+                    'Menu',
+                    style: TextStyle(
+                      color: Color(0xFFD32D43),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
+          // Search Bar
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Material(
+                elevation: 3,
+                borderRadius: BorderRadius.circular(16),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search menu items...',
+                    prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFFD32D43)),
+                    suffixIcon: _searchController.text.isNotEmpty
+                        ? IconButton(
+                            icon: const Icon(Icons.clear, color: Color(0xFFD32D43)),
+                            onPressed: () {
+                              _searchController.clear();
+                              Provider.of<MenuProvider>(context, listen: false).setSearchQuery('');
+                            },
+                          )
+                        : null,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
+                    filled: true,
+                    fillColor: Colors.white,
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
+                  onChanged: (value) {
+                    Provider.of<MenuProvider>(context, listen: false).setSearchQuery(value);
+                  },
+                ),
+              ),
+            ),
+          ),
+          // Category Filter
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+              child: Consumer<MenuProvider>(
+                builder: (context, menuProvider, child) {
+                  return SizedBox(
+                    height: 38,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: menuProvider.availableCategories.length,
+                      itemBuilder: (context, index) {
+                        final category = menuProvider.availableCategories[index];
+                        final isSelected = category == menuProvider.selectedCategory;
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 10),
+                          child: FilterChip(
+                            label: Text(
+                              category,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            selected: isSelected,
+                            onSelected: (selected) {
+                              menuProvider.setSelectedCategory(category);
+                            },
+                            backgroundColor: Colors.grey[200],
+                            selectedColor: const Color(0xFFD32D43),
+                            labelStyle: TextStyle(
+                              color: isSelected ? Colors.white : Color(0xFFD32D43),
+                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                            ),
+                            side: isSelected
+                                ? const BorderSide(color: Color(0xFFD32D43), width: 2)
+                                : BorderSide.none,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+          // Menu Items Grid
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+              child: Consumer<MenuProvider>(
+                builder: (context, menuProvider, child) {
+                  if (menuProvider.isLoading) {
+                    return const Center(
+                      child: CircularProgressIndicator(
+                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                      ),
+                    );
+                  }
+                  if (menuProvider.error != null) {
+                    return Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'Failed to load menu',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            menuProvider.error!,
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          const SizedBox(height: 16),
+                          ElevatedButton(
+                            onPressed: () => menuProvider.loadMenuItems(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFFD32D43),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: const Text('Retry'),
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  if (menuProvider.filteredMenuItems.isEmpty) {
+                    return Center(
+                      child: Column(
+                        children: [
+                          Icon(
+                            Icons.restaurant_menu,
+                            size: 64,
+                            color: Colors.grey[400],
+                          ),
+                          const SizedBox(height: 16),
+                          Text(
+                            'No menu items found',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Try adjusting your search or category filter',
+                            style: TextStyle(
+                              color: Colors.grey[500],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return GridView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      childAspectRatio: 0.7,
+                      crossAxisSpacing: 18,
+                      mainAxisSpacing: 18,
+                    ),
+                    itemCount: menuProvider.filteredMenuItems.length,
+                    itemBuilder: (context, index) {
+                      final menuItem = menuProvider.filteredMenuItems[index];
+                      return _buildMenuItemCard(context, menuItem, menuProvider);
+                    },
+                  );
+                },
+              ),
+            ),
+          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 80)),
         ],
       ),
       bottomNavigationBar: Container(
@@ -468,9 +311,9 @@ class _HomePageState extends State<HomePage> {
           color: Colors.white,
           boxShadow: [
             BoxShadow(
-              color: Color(0xFFD32D43).withAlpha((0.08 * 255).toInt()),
+              color: Colors.grey.withOpacity(0.08),
               spreadRadius: 1,
-              blurRadius: 10,
+              blurRadius: 8,
               offset: const Offset(0, -1),
             ),
           ],
@@ -494,13 +337,13 @@ class _HomePageState extends State<HomePage> {
             }
           },
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.home, size: 20), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart, size: 20), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.history, size: 20), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.person, size: 20), label: ''),
           ],
           selectedItemColor: Color(0xFFD32D43),
-          unselectedItemColor: Color(0xFF1A1A1A),
+          unselectedItemColor: Colors.grey,
           showSelectedLabels: false,
           showUnselectedLabels: false,
           backgroundColor: Colors.white,
@@ -510,132 +353,407 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
-  Widget _categoryChip(String category) {
-    final isSelected = selectedCategory == category;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        selected: isSelected,
-        label: Text(category),
-        onSelected: (selected) {
-          setState(() {
-            selectedCategory = category;
-          });
-        },
-        backgroundColor: Colors.grey[100],
-        selectedColor: Color(0xFFD32D43).withOpacity(0.1),
-        checkmarkColor: Color(0xFFD32D43),
-        labelStyle: TextStyle(
-          color: isSelected ? Color(0xFFD32D43) : Color(0xFF1A1A1A),
-          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+  Widget _buildMenuItemCard(BuildContext context, MenuItem menuItem, MenuProvider menuProvider) {
+    return GestureDetector(
+      onTap: () => _showAddOnsModal(context, menuItem, menuProvider),
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withValues(red: 128, green: 128, blue: 128, alpha: 26),
+              spreadRadius: 1,
+              blurRadius: 4,
+              offset: const Offset(0, 1),
+            ),
+          ],
         ),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: BorderSide(
-            color: isSelected ? Color(0xFFD32D43) : Colors.grey[300]!,
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Image
+            Expanded(
+              flex: 3,
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  color: Colors.grey[100], // Background color for images
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                  child: Image(
+                    image: _getImageProvider(menuItem.image),
+                    width: double.infinity,
+                    height: double.infinity,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: Colors.grey[100],
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                : null,
+                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        width: double.infinity,
+                        height: double.infinity,
+                        color: Colors.grey[200],
+                        child: const Icon(
+                          Icons.image_not_supported,
+                          size: 30,
+                          color: Colors.grey,
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+            ),
+            // Content
+            Expanded(
+              flex: 2,
+              child: Padding(
+                padding: const EdgeInsets.all(8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      menuItem.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 12,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      menuItem.category.isNotEmpty && menuItem.category != 'unknown' 
+                          ? menuItem.category 
+                          : 'Menu Item',
+                      style: TextStyle(
+                        color: Colors.grey[600],
+                        fontSize: 12,
+                      ),
+                    ),
+                    const Spacer(),
+                    Text(
+                      '₱${menuItem.price.toStringAsFixed(2)}',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: Color(0xFFD32D43),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _menuCard(
-    String title,
-    double price,
-    String imagePath,
-    VoidCallback onAddToCart,
-  ) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Color(0xFFD32D43).withAlpha((0.08 * 255).toInt()),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 1),
+  ImageProvider _getImageProvider(String imagePath) {
+    // Handle null or empty image paths
+    if (imagePath.isEmpty || imagePath.trim().isEmpty) {
+      return const AssetImage('assets/ramen1.jpg');
+    }
+    
+    // Check if it's a network image (starts with http)
+    if (imagePath.startsWith('http')) {
+      return NetworkImage(imagePath);
+    }
+    
+    // Check if it's a local asset
+    if (imagePath.startsWith('assets/')) {
+      return AssetImage(imagePath);
+    }
+    
+    // Check if it's an upload path (starts with /uploads/)
+    if (imagePath.startsWith('/uploads/')) {
+      return NetworkImage('http://localhost:3000$imagePath');
+    }
+    
+    // Check if it's a full file path (like /Users/... or C:\...)
+    if (imagePath.contains('/') || imagePath.contains('\\')) {
+      // Extract filename from path
+      String filename = imagePath.split('/').last;
+      if (filename.contains('\\')) {
+        filename = filename.split('\\').last;
+      }
+      // Try to serve from uploads directory
+      return NetworkImage('http://localhost:3000/uploads/$filename');
+    }
+    
+    // If it's just a filename without path, try to serve from uploads
+    if (imagePath.isNotEmpty && !imagePath.startsWith('assets/')) {
+      return NetworkImage('http://localhost:3000/uploads/$imagePath');
+    }
+    
+    // Default fallback - use one of the existing ramen images
+    return const AssetImage('assets/ramen1.jpg');
+  }
+
+  void _showAddOnsModal(BuildContext context, MenuItem menuItem, MenuProvider menuProvider) {
+    List<Map<String, dynamic>> selectedAddOns = [];
+    double totalPrice = menuItem.price;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      enableDrag: true,
+      isDismissible: true,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) => Container(
+          height: MediaQuery.of(context).size.height * 0.6,
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
           ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Container(
-            height: 120,
-            decoration: BoxDecoration(
-              borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-              image: DecorationImage(
-                image: AssetImage(imagePath),
-                fit: BoxFit.cover,
-              ),
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 14,
-                    color: Color(0xFF1A1A1A),
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  '₱${price.toStringAsFixed(2)}',
-                  style: TextStyle(
-                    color: Color(0xFF1A1A1A),
-                    fontSize: 13,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: double.infinity,
-                  height: 32,
-                  decoration: BoxDecoration(
-                    color: Color(0xFFD32D43),
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: TextButton(
-                    onPressed: () {
-                      final item = menuItems.firstWhere(
-                        (item) => item['name'] == title,
-                        orElse: () => {
-                          'name': title,
-                          'price': price,
-                          'image': imagePath,
-                          'category': 'All',
-                        },
-                      );
-                      _showAddOnsModal(context, item);
-                    },
-                    style: TextButton.styleFrom(
-                      padding: EdgeInsets.zero,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFD32D43).withAlpha((0.08 * 255).toInt()),
+                      spreadRadius: 1,
+                      blurRadius: 8,
+                      offset: const Offset(0, 1),
                     ),
-                    child: const Text(
-                      'Add to Cart',
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Customize Your Order',
                       style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 12,
+                        fontSize: 16,
                         fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A1A),
                       ),
                     ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: const Icon(Icons.close, size: 20),
+                      color: Color(0xFF1A1A1A),
+                    ),
+                  ],
+                ),
+              ),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Item details
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Color(0xFFD32D43), width: 1),
+                        ),
+                        child: Row(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(6),
+                              child: Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(6),
+                                ),
+                                child: Image(
+                                  image: _getImageProvider(menuItem.image),
+                                  width: 60,
+                                  height: 60,
+                                  fit: BoxFit.cover,
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      width: 60,
+                                      height: 60,
+                                      color: Colors.grey[100],
+                                      child: Center(
+                                        child: SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                            value: loadingProgress.expectedTotalBytes != null
+                                                ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
+                                                : null,
+                                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                                            strokeWidth: 2,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      width: 60,
+                                      height: 60,
+                                      decoration: BoxDecoration(
+                                        color: Colors.grey[200],
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: const Icon(
+                                        Icons.image_not_supported,
+                                        size: 20,
+                                        color: Colors.grey,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    menuItem.name,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: Color(0xFF1A1A1A),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    '₱${totalPrice.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      color: Color(0xFF1A1A1A),
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      // Add-ons section
+                      Text(
+                        'Add-ons',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1A1A),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      ...menuProvider.getAddOnsForCategory(
+                        menuItem.category.isNotEmpty && menuItem.category != 'unknown' 
+                            ? menuItem.category 
+                            : 'ramen'
+                      ).map((addon) {
+                        final isSelected = selectedAddOns.any((item) => item['name'] == addon['name']);
+                        return CheckboxListTile(
+                          title: Text(addon['name']),
+                          subtitle: Text('₱${addon['price'].toStringAsFixed(2)}'),
+                          value: isSelected,
+                          onChanged: (bool? value) {
+                            setState(() {
+                              if (value == true) {
+                                selectedAddOns.add(addon);
+                                totalPrice += addon['price'];
+                              } else {
+                                selectedAddOns.removeWhere((item) => item['name'] == addon['name']);
+                                totalPrice -= addon['price'];
+                              }
+                            });
+                          },
+                          activeColor: Color(0xFFD32D43),
+                        );
+                      }).toList(),
+                    ],
                   ),
                 ),
-              ],
-            ),
+              ),
+              Container(
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Total:',
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                          Text(
+                            '₱${totalPrice.toStringAsFixed(2)}',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFFD32D43),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    ElevatedButton(
+                      onPressed: () {
+                        // Add to cart logic here
+                        final cartProvider = Provider.of<CartProvider>(context, listen: false);
+                        cartProvider.addItem({
+                          'id': menuItem.id,
+                          'name': menuItem.name,
+                          'price': totalPrice,
+                          'image': menuItem.image,
+                          'addOns': selectedAddOns,
+                        });
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('${menuItem.name} added to cart'),
+                            backgroundColor: Colors.green,
+                          ),
+                        );
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Color(0xFFD32D43),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      ),
+                      child: const Text(
+                        'Add to Cart',
+                        style: TextStyle(color: Colors.white, fontSize: 12),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

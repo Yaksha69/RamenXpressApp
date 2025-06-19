@@ -35,12 +35,12 @@ const register = async (req, res) => {
     });
 
     res.status(201).json({
-      message: 'User registered successfully',
-      user: {
+      customer: {
         id: user._id,
         username: user.username,
         role: user.role
-      }
+      },
+      message: 'User registered successfully'
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });
@@ -78,13 +78,13 @@ const login = async (req, res) => {
     });
 
     res.json({
-      message: 'Login successful',
-      token,
-      user: {
+      customer: {
         id: user._id,
         username: user.username,
         role: user.role
-      }
+      },
+      message: 'Login successful',
+      token
     });
   } catch (error) {
     res.status(500).json({ message: 'Server error', error });

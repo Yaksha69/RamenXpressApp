@@ -6,6 +6,11 @@ const SalesSchema = new mongoose.Schema({
     required: true,
     unique: true
   },
+  customerId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Customer',
+    required: false // Optional for POS orders
+  },
   items: [{
     name: {
       type: String,
@@ -40,13 +45,34 @@ const SalesSchema = new mongoose.Schema({
   },
   orderType: {
     type: String,
-    enum: ['takeout', 'dine-in'],
+    enum: ['takeout', 'dine-in', 'delivery'],
     required: true
   },
   paymentMethod: {
     type: String,
     enum: ['gcash', 'paymaya', 'cash'],
     required: true
+  },
+  deliveryAddress: {
+    street: String,
+    city: String,
+    state: String,
+    zipCode: String,
+    country: String,
+    isDefault: Boolean
+  },
+  deliveryFee: {
+    type: Number,
+    default: 0
+  },
+  status: {
+    type: String,
+    enum: ['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'],
+    default: 'pending'
+  },
+  notes: {
+    type: String,
+    default: ''
   },
   orderDate: {
     type: Date,

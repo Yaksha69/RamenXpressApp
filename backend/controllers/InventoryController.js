@@ -1,4 +1,5 @@
 const Inventory = require('../models/Inventory');
+const { io } = require('../server');
 
 // Get all inventory items
 const getInventory = async (req, res) => {
@@ -22,6 +23,7 @@ const addInventory = async (req, res) => {
       status
     });
     const savedItem = await newItem.save();
+    io.emit('inventoryUpdated', { type: 'add', item: savedItem });
     res.status(201).json(savedItem);
   } catch (err) {
     res.status(400).json({ error: 'Failed to add inventory item' });
@@ -56,6 +58,7 @@ const updateInventoryQuantity = async (req, res) => {
     }
 
     const updatedItem = await item.save();
+    io.emit('inventoryUpdated', { type: 'update', item: updatedItem });
     res.status(200).json(updatedItem);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update inventory quantity' });
@@ -72,6 +75,7 @@ const deleteInventory = async (req, res) => {
       return res.status(404).json({ error: 'Inventory item not found' });
     }
     
+    io.emit('inventoryUpdated', { type: 'delete', item: deletedItem });
     res.status(200).json({ message: 'Inventory item deleted successfully', deletedItem });
   } catch (err) {
     res.status(500).json({ error: 'Failed to delete inventory item' });
@@ -124,6 +128,7 @@ const editInventory = async (req, res) => {
     }
 
     const updatedItem = await item.save();
+    io.emit('inventoryUpdated', { type: 'edit', item: updatedItem });
     res.status(200).json(updatedItem);
   } catch (err) {
     res.status(500).json({ error: 'Failed to update inventory item' });

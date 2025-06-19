@@ -3,14 +3,15 @@ import 'package:provider/provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/delivery_addresses_provider.dart';
 import 'providers/payment_methods_provider.dart';
+import 'providers/order_history_provider.dart';
+import 'providers/auth_provider.dart';
+import 'services/order_service.dart';
+import 'invoice_page.dart';
 import 'models/delivery_address.dart';
 import 'models/payment_method.dart';
 import 'edit_address_page.dart';
 import 'edit_payment_method_page.dart';
-import 'invoice_page.dart';
-import 'package:uuid/uuid.dart';
-import 'providers/order_history_provider.dart';
-import 'providers/profile_provider.dart';
+import 'services/api_service.dart';
 
 class PaymentPage extends StatefulWidget {
   const PaymentPage({super.key});
@@ -20,9 +21,6 @@ class PaymentPage extends StatefulWidget {
 }
 
 class _PaymentPageState extends State<PaymentPage> {
-  String selectedDeliveryMethod = 'Pick Up';
-  PaymentMethod? selectedPaymentMethod;
-  DeliveryAddress? selectedAddress;
   final TextEditingController _notesController = TextEditingController();
 
   void updateQuantity(String name, int change) {
@@ -33,22 +31,51 @@ class _PaymentPageState extends State<PaymentPage> {
     context.read<CartProvider>().removeItem(name);
   }
 
-  double get subtotal => context.watch<CartProvider>().subtotal;
-  double get shippingFee => selectedDeliveryMethod == 'Delivery' ? 50.0 : 0.0;
+  double get subtotal => context.read<CartProvider>().subtotal;
+  double get shippingFee => context.read<CartProvider>().selectedDeliveryMethod == 'Delivery' ? 50.0 : 0.0;
   double get total => subtotal + shippingFee;
 
   @override
   void initState() {
     super.initState();
-    // Set default payment method if available
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final defaultMethod = context.read<PaymentMethodsProvider>().defaultPaymentMethod;
-      if (defaultMethod != null) {
-        setState(() {
-          selectedPaymentMethod = defaultMethod;
-        });
+    // Load saved addresses and payment methods from backend
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final cartProvider = context.read<CartProvider>();
+      
+      // Load addresses and payment methods from backend
+      await context.read<DeliveryAddressesProvider>().loadAddresses();
+      await context.read<PaymentMethodsProvider>().loadPaymentMethods();
+      
+      // Set default payment method if available and none is selected
+      if (cartProvider.selectedPaymentMethod == null) {
+        final defaultMethod = context.read<PaymentMethodsProvider>().defaultPaymentMethod;
+        if (defaultMethod != null) {
+          cartProvider.setPaymentMethod(defaultMethod);
+        }
       }
+      
+      // Set default address if delivery is selected and no address is chosen
+      if (cartProvider.selectedDeliveryMethod == 'Delivery' && cartProvider.selectedAddress == null) {
+        final defaultAddress = context.read<DeliveryAddressesProvider>().defaultAddress;
+        if (defaultAddress != null) {
+          cartProvider.setDeliveryAddress(defaultAddress);
+        }
+      }
+      
+      // Set notes controller text
+      _notesController.text = cartProvider.notes;
+      
+      // Add listener to save notes to cart provider
+      _notesController.addListener(() {
+        cartProvider.setNotes(_notesController.text);
+      });
     });
+  }
+
+  @override
+  void dispose() {
+    _notesController.dispose();
+    super.dispose();
   }
 
   @override
@@ -56,6 +83,16 @@ class _PaymentPageState extends State<PaymentPage> {
     final cartItems = context.watch<CartProvider>().items;
     final deliveryAddresses = context.watch<DeliveryAddressesProvider>().addresses;
     final paymentMethods = context.watch<PaymentMethodsProvider>().paymentMethods;
+
+    // Filter payment methods based on delivery method
+    List<PaymentMethod> filteredPaymentMethods = paymentMethods.where((method) {
+      // Only GCash and PayMaya for Pick Up
+      if (context.read<CartProvider>().selectedDeliveryMethod == 'Pick Up') {
+        return method.type == PaymentType.gcash || method.type == PaymentType.paymaya;
+      }
+      // For Delivery, only GCash and PayMaya (COD handled separately)
+      return method.type == PaymentType.gcash || method.type == PaymentType.paymaya;
+    }).toList();
 
     if (cartItems.isEmpty) {
       return Scaffold(
@@ -244,9 +281,9 @@ class _PaymentPageState extends State<PaymentPage> {
                       item['price'],
                       item['image'],
                       item['quantity'].toString(),
-                      () => updateQuantity(item['name'], -1),
-                      () => updateQuantity(item['name'], 1),
-                      () => removeItem(item['name']),
+                      () => context.read<CartProvider>().updateQuantity(item['name'], -1),
+                      () => context.read<CartProvider>().updateQuantity(item['name'], 1),
+                      () => context.read<CartProvider>().removeItem(item['name']),
                     );
                   }).toList(),
                   const SizedBox(height: 24),
@@ -263,6 +300,76 @@ class _PaymentPageState extends State<PaymentPage> {
                   const Divider(height: 32),
                   _summaryRow('Total', 'PHP ${total.toStringAsFixed(2)}', isTotal: true),
                   const SizedBox(height: 24),
+                  
+                  // Payment and Delivery Information Display
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey[50],
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey[300]!),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Order Information',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Icon(Icons.delivery_dining, size: 16, color: Colors.grey[600]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Delivery Method: ${context.read<CartProvider>().selectedDeliveryMethod}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (context.read<CartProvider>().selectedDeliveryMethod == 'Delivery' && context.read<CartProvider>().selectedAddress != null) ...[
+                          Row(
+                            children: [
+                              Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Address: ${context.read<CartProvider>().selectedAddress!.fullAddress}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[700],
+                                  ),
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
+                        ],
+                        Row(
+                          children: [
+                            Icon(Icons.payment, size: 16, color: Colors.grey[600]),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Payment: ${context.read<CartProvider>().selectedPaymentMethod?.displayName ?? 'Not selected'}',
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[700],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                   const Text(
                     'Delivery Method',
                     style: TextStyle(
@@ -277,12 +384,9 @@ class _PaymentPageState extends State<PaymentPage> {
                         child: _deliveryOption(
                           'Pick Up',
                           Icons.store,
-                          selectedDeliveryMethod == 'Pick Up',
+                          context.read<CartProvider>().selectedDeliveryMethod == 'Pick Up',
                           () {
-                            setState(() {
-                              selectedDeliveryMethod = 'Pick Up';
-                              selectedAddress = null;
-                            });
+                            context.read<CartProvider>().setDeliveryMethod('Pick Up');
                           },
                         ),
                       ),
@@ -291,19 +395,15 @@ class _PaymentPageState extends State<PaymentPage> {
                         child: _deliveryOption(
                           'Delivery',
                           Icons.delivery_dining,
-                          selectedDeliveryMethod == 'Delivery',
+                          context.read<CartProvider>().selectedDeliveryMethod == 'Delivery',
                           () {
-                            setState(() {
-                              selectedDeliveryMethod = 'Delivery';
-                              // Set default address if available
-                              selectedAddress = context.read<DeliveryAddressesProvider>().defaultAddress;
-                            });
+                            context.read<CartProvider>().setDeliveryMethod('Delivery');
                           },
                         ),
                       ),
                     ],
                   ),
-                  if (selectedDeliveryMethod == 'Delivery') ...[
+                  if (context.read<CartProvider>().selectedDeliveryMethod == 'Delivery') ...[
                     const SizedBox(height: 24),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -371,19 +471,17 @@ class _PaymentPageState extends State<PaymentPage> {
                           padding: const EdgeInsets.only(bottom: 8),
                           child: InkWell(
                             onTap: () {
-                              setState(() {
-                                selectedAddress = address;
-                              });
+                              context.read<CartProvider>().setDeliveryAddress(address);
                             },
                             child: Container(
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: selectedAddress?.id == address.id
+                                color: context.read<CartProvider>().selectedAddress?.id == address.id
                                     ? Colors.deepOrange.withOpacity(0.1)
                                     : Colors.grey[50],
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: selectedAddress?.id == address.id
+                                  color: context.read<CartProvider>().selectedAddress?.id == address.id
                                       ? Colors.deepOrange
                                       : Colors.grey[300]!,
                                 ),
@@ -431,14 +529,14 @@ class _PaymentPageState extends State<PaymentPage> {
                   ],
                   const SizedBox(height: 24),
                   const Text(
-                    'Payment Method',
+                    'Payment Methods',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  if (paymentMethods.isEmpty)
+                  if (filteredPaymentMethods.isEmpty)
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -491,24 +589,22 @@ class _PaymentPageState extends State<PaymentPage> {
                       ),
                     )
                   else
-                    ...paymentMethods.map((method) {
+                    ...filteredPaymentMethods.map((method) {
                       return Padding(
                         padding: const EdgeInsets.only(bottom: 8),
                         child: InkWell(
                           onTap: () {
-                            setState(() {
-                              selectedPaymentMethod = method;
-                            });
+                            context.read<CartProvider>().setPaymentMethod(method);
                           },
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: selectedPaymentMethod?.id == method.id
+                              color: context.read<CartProvider>().selectedPaymentMethod?.id == method.id
                                   ? Colors.deepOrange.withOpacity(0.1)
                                   : Colors.grey[50],
                               borderRadius: BorderRadius.circular(12),
                               border: Border.all(
-                                color: selectedPaymentMethod?.id == method.id
+                                color: context.read<CartProvider>().selectedPaymentMethod?.id == method.id
                                     ? Colors.deepOrange
                                     : Colors.grey[300]!,
                               ),
@@ -517,7 +613,7 @@ class _PaymentPageState extends State<PaymentPage> {
                               children: [
                                 Icon(
                                   method.icon,
-                                  color: selectedPaymentMethod?.id == method.id
+                                  color: context.read<CartProvider>().selectedPaymentMethod?.id == method.id
                                       ? Colors.deepOrange
                                       : Colors.grey,
                                 ),
@@ -575,7 +671,7 @@ class _PaymentPageState extends State<PaymentPage> {
                         ),
                       );
                     }).toList(),
-                  if (paymentMethods.isNotEmpty)
+                  if (filteredPaymentMethods.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(top: 8),
                       child: TextButton.icon(
@@ -619,12 +715,12 @@ class _PaymentPageState extends State<PaymentPage> {
                   SizedBox(
                     width: double.infinity,
                     child: ElevatedButton(
-                      onPressed: (selectedDeliveryMethod == 'Delivery' && selectedAddress == null) ||
-                              selectedPaymentMethod == null
-                          ? null
-                          : () {
-                              _showConfirmationDialog(context);
-                            },
+                      onPressed: () {
+                        final cartProvider = context.read<CartProvider>();
+                        if (cartProvider.selectedDeliveryMethod == 'Delivery' && cartProvider.selectedAddress == null) return;
+                        if (cartProvider.selectedPaymentMethod == null) return;
+                        _showConfirmationDialog(context);
+                      },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Color(0xFFD32D43),
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -719,10 +815,7 @@ class _PaymentPageState extends State<PaymentPage> {
             height: 80,
             child: ClipRRect(
               borderRadius: BorderRadius.circular(8),
-              child: Image.asset(
-                imagePath,
-                fit: BoxFit.cover,
-              ),
+              child: _buildCartImage(imagePath),
             ),
           ),
           const SizedBox(width: 16),
@@ -792,6 +885,32 @@ class _PaymentPageState extends State<PaymentPage> {
         ],
       ),
     );
+  }
+
+  Widget _buildCartImage(String imagePath) {
+    if (imagePath.isEmpty || imagePath.trim().isEmpty) {
+      return const Image(
+        image: AssetImage('assets/ramen1.jpg'),
+        fit: BoxFit.cover,
+      );
+    }
+    if (imagePath.startsWith('http')) {
+      return Image.network(imagePath, fit: BoxFit.cover);
+    }
+    if (imagePath.startsWith('assets/')) {
+      return Image.asset(imagePath, fit: BoxFit.cover);
+    }
+    if (imagePath.startsWith('/uploads/')) {
+      return Image.network('http://localhost:3000$imagePath', fit: BoxFit.cover);
+    }
+    if (imagePath.contains('/') || imagePath.contains('\\')) {
+      String filename = imagePath.split('/').last;
+      if (filename.contains('\\')) {
+        filename = filename.split('\\').last;
+      }
+      return Image.network('http://localhost:3000/uploads/$filename', fit: BoxFit.cover);
+    }
+    return Image.network('http://localhost:3000/uploads/$imagePath', fit: BoxFit.cover);
   }
 
   Widget _summaryRow(String label, String value, {bool isTotal = false}) {
@@ -868,20 +987,20 @@ class _PaymentPageState extends State<PaymentPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Delivery Method: ${selectedDeliveryMethod == 'Delivery' ? 'Delivery' : 'Pick Up'}',
+              'Delivery Method: ${context.read<CartProvider>().selectedDeliveryMethod == 'Delivery' ? 'Delivery' : 'Pick Up'}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
-            if (selectedDeliveryMethod == 'Delivery') ...[
+            if (context.read<CartProvider>().selectedDeliveryMethod == 'Delivery') ...[
               const SizedBox(height: 8),
               Text(
                 'Delivery Address:',
                 style: TextStyle(color: Colors.grey[600]),
               ),
-              Text(selectedAddress!.fullAddress),
+              Text(context.read<CartProvider>().selectedAddress!.fullAddress),
             ],
             const SizedBox(height: 16),
             Text(
-              'Payment Method: ${selectedPaymentMethod!.displayName}',
+              'Payment Method: ${context.read<CartProvider>().selectedPaymentMethod!.displayName}',
               style: const TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
@@ -920,59 +1039,174 @@ class _PaymentPageState extends State<PaymentPage> {
     );
   }
 
-  void _processOrder(BuildContext context) {
-    // Store cart data before clearing
-    final cartItems = context.read<CartProvider>().items;
-    final orderSubtotal = context.read<CartProvider>().subtotal;
-    final orderShippingFee = selectedDeliveryMethod == 'Delivery' ? 50.0 : 0.0;
-    final orderTotal = orderSubtotal + orderShippingFee;
-
-    // Clear cart first
-    context.read<CartProvider>().clearCart();
-
-    // Create order data
-    final order = {
-      'date': DateTime.now(),
-      'status': 'Pending',
-      'total': orderTotal,
-      'items': cartItems.map((item) => {
-        'name': item['name'],
-        'quantity': item['quantity'],
-        'price': item['price'],
-        'addons': item['addons'],
-      }).toList(),
-      'deliveryMethod': selectedDeliveryMethod,
-      'deliveryAddress': selectedDeliveryMethod == 'Delivery' ? selectedAddress : null,
-      'paymentMethod': selectedPaymentMethod,
-      'notes': _notesController.text.isNotEmpty ? _notesController.text : null,
-    };
-
-    // Add order to history
-    context.read<OrderHistoryProvider>().addOrder(
-      date: order['date'] as DateTime,
-      status: order['status'] as String,
-      total: order['total'] as double,
-      items: order['items'] as List<Map<String, dynamic>>,
-      deliveryMethod: order['deliveryMethod'] as String,
-      deliveryAddress: order['deliveryAddress'] as DeliveryAddress?,
-      paymentMethod: order['paymentMethod'] as PaymentMethod,
-      notes: order['notes'] as String?,
-    );
-
-    // Show success message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Order placed successfully!'),
-        backgroundColor: Colors.green,
+  void _processOrder(BuildContext context) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(
+          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+        ),
       ),
     );
 
-    // Navigate to invoice page
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(
-        builder: (context) => InvoicePage(order: order),
-      ),
-    );
+    try {
+      final authProvider = context.read<AuthProvider>();
+      final cartProvider = context.read<CartProvider>();
+      
+      if (!authProvider.isLoggedIn) {
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context); // Close loading dialog
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please login to place an order'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Get token from API service
+      final token = await ApiService.getToken();
+      if (token == null) {
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context); // Close loading dialog
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Authentication token not found'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
+      // Prepare order data
+      final orderItems = cartProvider.getOrderItems();
+      final orderType = cartProvider.selectedDeliveryMethod == 'Delivery' ? 'delivery' : 'takeout';
+      String paymentMethod;
+      paymentMethod = cartProvider.selectedPaymentMethod?.type == PaymentType.gcash
+          ? 'gcash'
+          : 'paymaya';
+      
+      Map<String, dynamic>? deliveryAddressData;
+      if (cartProvider.selectedDeliveryMethod == 'Delivery' && cartProvider.selectedAddress != null) {
+        deliveryAddressData = cartProvider.selectedAddress!.toJson();
+      }
+
+      // Place order with backend
+      final result = await OrderService.placeOrder(
+        items: orderItems,
+        orderType: orderType,
+        paymentMethod: paymentMethod,
+        customerId: authProvider.customer?.id,
+        deliveryAddress: deliveryAddressData,
+        notes: cartProvider.notes.isNotEmpty ? cartProvider.notes : null,
+        token: token,
+      );
+
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context); // Close loading dialog
+      }
+
+      if (result['success']) {
+        // Clear cart
+        cartProvider.clearCart();
+
+        // Add order to history
+        final orderDetails = result['orderDetails'];
+        context.read<OrderHistoryProvider>().addOrder(
+          orderId: orderDetails['orderId'],
+          date: DateTime.parse(orderDetails['orderDate']),
+          status: orderDetails['status'],
+          total: orderDetails['total'].toDouble(),
+          items: orderDetails['items'].map<Map<String, dynamic>>((item) => {
+            'name': item['name'],
+            'quantity': item['quantity'],
+            'price': item['price'],
+            'addons': item['addOns'] ?? [],
+          }).toList(),
+          deliveryMethod: orderDetails['orderType'],
+          deliveryAddress: orderDetails['deliveryAddress'] != null 
+              ? DeliveryAddress.fromJson(orderDetails['deliveryAddress'])
+              : null,
+          paymentMethod: PaymentMethod(
+            id: '1',
+            type: orderDetails['paymentMethod'] == 'gcash' 
+                ? PaymentType.gcash 
+                : PaymentType.paymaya,
+            title: orderDetails['paymentMethod'] == 'cash' 
+                ? 'Cash on Delivery' 
+                : orderDetails['paymentMethod'].toUpperCase(),
+            accountName: orderDetails['paymentMethod'] == 'cash' ? 'N/A' : 'Customer',
+            accountNumber: orderDetails['paymentMethod'] == 'cash' ? 'N/A' : '****',
+            isDefault: false,
+          ),
+          notes: orderDetails['notes'],
+        );
+
+        // Show success message
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Order #${orderDetails['orderId']} placed successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+
+        // Navigate to invoice page
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => InvoicePage(
+              order: {
+                'orderId': orderDetails['orderId'],
+                'date': DateTime.parse(orderDetails['orderDate']),
+                'status': orderDetails['status'],
+                'total': orderDetails['total'],
+                'items': orderDetails['items'],
+                'orderType': orderDetails['orderType'],
+                'deliveryAddress': orderDetails['deliveryAddress'],
+                'paymentMethod': PaymentMethod(
+                  id: '1',
+                  type: orderDetails['paymentMethod'] == 'gcash' 
+                      ? PaymentType.gcash 
+                      : PaymentType.paymaya,
+                  title: orderDetails['paymentMethod'] == 'cash' 
+                      ? 'Cash on Delivery' 
+                      : orderDetails['paymentMethod'].toUpperCase(),
+                  accountName: orderDetails['paymentMethod'] == 'cash' ? 'N/A' : 'Customer',
+                  accountNumber: orderDetails['paymentMethod'] == 'cash' ? 'N/A' : '****',
+                  isDefault: false,
+                ),
+                'notes': orderDetails['notes'],
+              },
+            ),
+          ),
+        );
+      } else {
+        // Show error message
+        if (mounted && Navigator.canPop(context)) {
+          Navigator.pop(context); // Close loading dialog
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Failed to place order'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted && Navigator.canPop(context)) {
+        Navigator.pop(context); // Close loading dialog
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 } 

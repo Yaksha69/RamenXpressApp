@@ -3,10 +3,27 @@ import 'package:intl/intl.dart';
 import 'models/payment_method.dart';
 import 'models/delivery_address.dart';
 
-class InvoicePage extends StatelessWidget {
+class InvoicePage extends StatefulWidget {
   final Map<String, dynamic> order;
 
-  const InvoicePage({super.key, required this.order});
+  const InvoicePage({Key? key, required this.order}) : super(key: key);
+
+  @override
+  State<InvoicePage> createState() => _InvoicePageState();
+}
+
+class _InvoicePageState extends State<InvoicePage> {
+  @override
+  void initState() {
+    super.initState();
+    print('🔍 DEBUG: InvoicePage initialized with order data: ${widget.order}');
+    print('🔍 DEBUG: orderId: ${widget.order['orderId']}');
+    print('🔍 DEBUG: date: ${widget.order['date']}');
+    print('🔍 DEBUG: status: ${widget.order['status']}');
+    print('🔍 DEBUG: total: ${widget.order['total']}');
+    print('🔍 DEBUG: items: ${widget.order['items']}');
+    print('🔍 DEBUG: paymentMethod: ${widget.order['paymentMethod']}');
+  }
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -27,8 +44,29 @@ class InvoicePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('MMM dd, yyyy hh:mm a');
+    print('🔍 DEBUG: InvoicePage build method called');
+    print('🔍 DEBUG: Current order data in build: ${widget.order}');
+    
+    final orderId = widget.order['orderId']?.toString() ?? 'N/A';
+    final date = widget.order['date'] as DateTime?;
+    final status = widget.order['status']?.toString() ?? 'Unknown';
+    final total = (widget.order['total'] as num?)?.toDouble() ?? 0.0;
+    final items = widget.order['items'] as List<dynamic>? ?? [];
+    final deliveryMethod = widget.order['deliveryMethod']?.toString() ?? 'Unknown';
+    final deliveryAddress = widget.order['deliveryAddress'] != null 
+        ? (widget.order['deliveryAddress'] is DeliveryAddress 
+            ? widget.order['deliveryAddress'] as DeliveryAddress
+            : DeliveryAddress.fromJson(widget.order['deliveryAddress']))
+        : null;
+    final paymentMethod = widget.order['paymentMethod'] as PaymentMethod?;
+    final notes = widget.order['notes']?.toString() ?? '';
+    
+    print('🔍 DEBUG: Parsed values - orderId: $orderId, date: $date, status: $status, total: $total');
+    print('🔍 DEBUG: Items count: ${items.length}');
+    print('🔍 DEBUG: Payment method: $paymentMethod');
 
+    final dateFormat = DateFormat('MMM dd, yyyy hh:mm a');
+    
     return Scaffold(
       appBar: AppBar(
         title: const Text('Order Invoice'),
@@ -55,17 +93,17 @@ class InvoicePage extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: _getStatusColor(order['status']).withAlpha((0.08 * 255).toInt()),
+                color: _getStatusColor(status).withAlpha((0.08 * 255).toInt()),
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(
-                  color: _getStatusColor(order['status']),
+                  color: _getStatusColor(status),
                 ),
               ),
               child: Row(
                 children: [
                   Icon(
                     Icons.info_outline,
-                    color: _getStatusColor(order['status']),
+                    color: _getStatusColor(status),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
@@ -81,9 +119,9 @@ class InvoicePage extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          order['status'],
+                          status,
                           style: TextStyle(
-                            color: _getStatusColor(order['status']),
+                            color: _getStatusColor(status),
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
                           ),
@@ -105,15 +143,19 @@ class InvoicePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildInfoRow('Order ID', order['id']),
-            _buildInfoRow('Date', dateFormat.format(order['date'])),
-            _buildInfoRow('Delivery Method', order['deliveryMethod']),
-            if (order['deliveryMethod'] == 'Delivery' && order['deliveryAddress'] != null)
+            _buildInfoRow('Order ID', orderId),
+            _buildInfoRow('Date', () {
+              try {
+                return dateFormat.format(date!);
+              } catch (e) {
+                return 'N/A';
+              }
+            }()),
+            _buildInfoRow('Delivery Method', deliveryMethod),
+            if (deliveryMethod == 'delivery' && deliveryAddress != null)
               _buildInfoRow(
                 'Delivery Address',
-                order['deliveryAddress'] is DeliveryAddress
-                    ? (order['deliveryAddress'] as DeliveryAddress).fullAddress
-                    : order['deliveryAddress'].toString(),
+                deliveryAddress.fullAddress,
               ),
             const SizedBox(height: 24),
 
@@ -128,7 +170,7 @@ class InvoicePage extends StatelessWidget {
             const SizedBox(height: 16),
             _buildInfoRow(
               'Payment Method',
-              (order['paymentMethod'] as PaymentMethod).displayName,
+              paymentMethod != null ? paymentMethod.displayName : 'N/A',
             ),
             const SizedBox(height: 24),
 
@@ -141,7 +183,7 @@ class InvoicePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            ...(order['items'] as List).map((item) {
+            ...items.map((item) {
               return Container(
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(12),
@@ -157,7 +199,7 @@ class InvoicePage extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            item['name'],
+                            item['name'] ?? 'Unknown Item',
                             style: const TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -166,7 +208,7 @@ class InvoicePage extends StatelessWidget {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            '₱${item['price'].toStringAsFixed(2)} × ${item['quantity']}',
+                            '₱${(item['price'] ?? 0.0).toStringAsFixed(2)} × ${item['quantity'] ?? 0}',
                             style: TextStyle(
                               color: Color(0xFF1A1A1A),
                               fontSize: 14,
@@ -187,7 +229,7 @@ class InvoicePage extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '₱${(item['price'] * item['quantity']).toStringAsFixed(2)}',
+                      '₱${((item['price'] ?? 0.0) * (item['quantity'] ?? 0)).toStringAsFixed(2)}',
                       style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
@@ -209,12 +251,12 @@ class InvoicePage extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
-            _buildSummaryRow('Subtotal', order['total'] - (order['deliveryMethod'] == 'Delivery' ? 50.0 : 0.0)),
-            if (order['deliveryMethod'] == 'Delivery')
+            _buildSummaryRow('Subtotal', total - (deliveryMethod == 'delivery' ? 50.0 : 0.0)),
+            if (deliveryMethod == 'delivery')
               _buildSummaryRow('Delivery Fee', 50.0),
             const Divider(height: 32, color: Color(0xFF1A1A1A)),
-            _buildSummaryRow('Total', order['total'], isTotal: true),
-            if (order['notes'] != null && order['notes'].toString().isNotEmpty) ...[
+            _buildSummaryRow('Total', total, isTotal: true),
+            if (notes.isNotEmpty) ...[
               const SizedBox(height: 24),
               const Text(
                 'Delivery Notes',
@@ -232,7 +274,7 @@ class InvoicePage extends StatelessWidget {
                   border: Border.all(color: Color(0xFFD32D43)),
                 ),
                 child: Text(
-                  order['notes'],
+                  notes,
                   style: TextStyle(
                     color: Color(0xFF1A1A1A),
                     fontSize: 16,

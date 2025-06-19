@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'providers/profile_provider.dart';
+import 'providers/auth_provider.dart';
 import 'edit_profile_page.dart';
 import 'delivery_addresses_page.dart';
 import 'payment_methods_page.dart';
@@ -44,8 +44,17 @@ class ProfilePage extends StatelessWidget {
               child: Column(
                 children: [
                   // Profile Header
-                  Consumer<ProfileProvider>(
-                    builder: (context, profile, child) {
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, child) {
+                      final customer = authProvider.customer;
+                      if (customer == null) {
+                        return const Center(
+                          child: CircularProgressIndicator(
+                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                          ),
+                        );
+                      }
+
                       return Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
@@ -64,7 +73,9 @@ class ProfilePage extends StatelessWidget {
                           children: [
                             CircleAvatar(
                               radius: 40,
-                              backgroundImage: AssetImage(profile.profileImage),
+                              backgroundImage: customer.profileImage != null
+                                  ? NetworkImage(customer.profileImage!)
+                                  : const AssetImage('assets/adminPIC.png') as ImageProvider,
                             ),
                             const SizedBox(width: 20),
                             Expanded(
@@ -72,7 +83,7 @@ class ProfilePage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    profile.name,
+                                    customer.fullName,
                                     style: const TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
@@ -80,9 +91,17 @@ class ProfilePage extends StatelessWidget {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    profile.email,
+                                    customer.email,
                                     style: TextStyle(
                                       color: Color(0xFF1A1A1A),
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    customer.phoneNumber,
+                                    style: TextStyle(
+                                      color: Colors.grey[600],
                                       fontSize: 14,
                                     ),
                                   ),
@@ -215,50 +234,68 @@ class ProfilePage extends StatelessWidget {
                   const SizedBox(height: 24),
 
                   // Logout Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Logout'),
-                            content: const Text('Are you sure you want to logout?'),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text('Cancel'),
-                              ),
-                              TextButton(
-                                onPressed: () {
-                                  Provider.of<ProfileProvider>(context, listen: false).logout();
-                                  Navigator.pushReplacementNamed(context, '/login');
+                  Consumer<AuthProvider>(
+                    builder: (context, authProvider, child) {
+                      return SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton(
+                          onPressed: authProvider.isLoading
+                              ? null
+                              : () {
+                                  showDialog(
+                                    context: context,
+                                    builder: (context) => AlertDialog(
+                                      title: const Text('Logout'),
+                                      content: const Text('Are you sure you want to logout?'),
+                                      actions: [
+                                        TextButton(
+                                          onPressed: () => Navigator.pop(context),
+                                          child: const Text('Cancel'),
+                                        ),
+                                        TextButton(
+                                          onPressed: () async {
+                                            Navigator.pop(context);
+                                            await authProvider.logout();
+                                            if (context.mounted) {
+                                              Navigator.pushReplacementNamed(context, '/login');
+                                            }
+                                          },
+                                          child: const Text(
+                                            'Logout',
+                                            style: TextStyle(color: Color(0xFFD32D43)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  );
                                 },
-                                child: const Text(
-                                  'Logout',
-                                  style: TextStyle(color: Color(0xFFD32D43)),
-                                ),
-                              ),
-                            ],
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Color(0xFFD32D43),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFD32D43),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          child: authProvider.isLoading
+                              ? const SizedBox(
+                                  height: 20,
+                                  width: 20,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                  ),
+                                )
+                              : const Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
                         ),
-                      ),
-                      child: const Text(
-                        'Logout',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 32),
                 ],

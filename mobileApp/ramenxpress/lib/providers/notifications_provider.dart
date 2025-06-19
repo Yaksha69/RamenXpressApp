@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../services/websocket_service.dart';
+import 'dart:convert';
 
 class NotificationItem {
   final String id;
@@ -21,9 +23,70 @@ class NotificationItem {
 class NotificationsProvider extends ChangeNotifier {
   final List<NotificationItem> _notifications = [];
   bool _hasUnread = false;
+  WebSocketService? _ws;
 
   List<NotificationItem> get notifications => _notifications;
   bool get hasUnread => _hasUnread;
+
+  void initWebSocket() {
+    _ws = WebSocketService();
+    _ws!.connect('http://localhost:3000'); // Socket.IO server URL
+    _ws!.messageStream.listen((event) {
+      final data = _parseEvent(event);
+      if (data != null) {
+        addNotification(data);
+      }
+    });
+  }
+
+  NotificationItem? _parseEvent(Map<String, dynamic> event) {
+    try {
+      if (event.containsKey('orderId') && event.containsKey('status')) {
+        return NotificationItem(
+          id: event['orderId'].toString(),
+          title: 'Order Status Updated',
+          message: 'Order #${event['orderId']} status: ${event['status']}',
+          timestamp: DateTime.now(),
+          imageUrl: 'assets/logo.png',
+        );
+      } else if (event.containsKey('orderId') && event.containsKey('items')) {
+        return NotificationItem(
+          id: event['orderId'].toString(),
+          title: 'New Order Placed',
+          message: 'Order #${event['orderId']} has been placed.',
+          timestamp: DateTime.now(),
+          imageUrl: 'assets/logo.png',
+        );
+      } else if (event['type'] == 'inventoryUpdated') {
+        return NotificationItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: 'Inventory Updated',
+          message: 'Inventory item updated.',
+          timestamp: DateTime.now(),
+          imageUrl: 'assets/logo.png',
+        );
+      } else if (event.containsKey('salePlaced')) {
+        return NotificationItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: 'New Sale',
+          message: 'A new sale has been placed.',
+          timestamp: DateTime.now(),
+          imageUrl: 'assets/logo.png',
+        );
+      } else if (event['type'] == 'notification') {
+        return NotificationItem(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          title: event['title'] ?? 'Notification',
+          message: event['message'] ?? '',
+          timestamp: DateTime.now(),
+          imageUrl: 'assets/logo.png',
+        );
+      }
+    } catch (e) {
+      print('Error parsing notification event: $e');
+    }
+    return null;
+  }
 
   void addNotification(NotificationItem notification) {
     _notifications.insert(0, notification);
@@ -66,6 +129,18 @@ class NotificationsProvider extends ChangeNotifier {
 
   void _updateUnreadStatus() {
     _hasUnread = _notifications.any((n) => !n.isRead);
+  }
+
+  // Subscribe to notifications for a specific user
+  void subscribeToNotifications(String userId) {
+    _ws?.subscribeToNotifications(userId);
+  }
+
+  // Dispose WebSocket connection
+  @override
+  void dispose() {
+    _ws?.dispose();
+    super.dispose();
   }
 
   // Add some sample notifications

@@ -1,6 +1,7 @@
 const Menu = require('../models/Menu');
 const Inventory = require('../models/Inventory');
 const Sales = require('../models/Sales');
+const { io } = require('../server');
 
 // Place an order with multiple items
 const placeOrder = async (req, res) => {
@@ -97,6 +98,15 @@ const placeOrder = async (req, res) => {
     });
 
     await sale.save();
+
+    io.emit('salePlaced', {
+      orderId,
+      items: orderItems,
+      total: totalAmount,
+      orderType,
+      paymentMethod,
+      orderDate: sale.orderDate
+    });
 
     res.status(200).json({
       message: 'Order placed successfully',

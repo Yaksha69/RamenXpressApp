@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:uuid/uuid.dart';
 import '../models/delivery_address.dart';
+import '../services/address_service.dart';
+import '../services/api_service.dart';
 
 class DeliveryAddressesProvider extends ChangeNotifier {
-  final List<DeliveryAddress> _addresses = [];
-  final _uuid = const Uuid();
+  List<DeliveryAddress> _addresses = [];
+  bool _isLoading = false;
+  String? _error;
 
   List<DeliveryAddress> get addresses => List.unmodifiable(_addresses);
+  bool get isLoading => _isLoading;
+  String? get error => _error;
 
   DeliveryAddress? get defaultAddress {
     try {
@@ -16,103 +20,200 @@ class DeliveryAddressesProvider extends ChangeNotifier {
     }
   }
 
-  void addAddress({
-    required String street,
-    required String barangay,
-    required String municipality,
-    required String province,
-    required String zipCode,
-    bool isDefault = false,
-  }) {
-    if (isDefault) {
-      // Remove default status from other addresses
-      for (var i = 0; i < _addresses.length; i++) {
-        if (_addresses[i].isDefault) {
-          _addresses[i] = DeliveryAddress(
-            id: _addresses[i].id,
-            street: _addresses[i].street,
-            barangay: _addresses[i].barangay,
-            municipality: _addresses[i].municipality,
-            province: _addresses[i].province,
-            zipCode: _addresses[i].zipCode,
-            isDefault: false,
-          );
-        }
-      }
-    }
-
-    _addresses.add(
-      DeliveryAddress(
-        id: _uuid.v4(),
-        street: street,
-        barangay: barangay,
-        municipality: municipality,
-        province: province,
-        zipCode: zipCode,
-        isDefault: isDefault,
-      ),
-    );
+  // Load addresses from backend
+  Future<void> loadAddresses() async {
+    _isLoading = true;
+    _error = null;
     notifyListeners();
-  }
 
-  void updateAddress({
-    required String id,
-    required String street,
-    required String barangay,
-    required String municipality,
-    required String province,
-    required String zipCode,
-    bool isDefault = false,
-  }) {
-    final index = _addresses.indexWhere((address) => address.id == id);
-    if (index != -1) {
-      if (isDefault) {
-        // Remove default status from other addresses
-        for (var i = 0; i < _addresses.length; i++) {
-          if (_addresses[i].isDefault) {
-            _addresses[i] = DeliveryAddress(
-              id: _addresses[i].id,
-              street: _addresses[i].street,
-              barangay: _addresses[i].barangay,
-              municipality: _addresses[i].municipality,
-              province: _addresses[i].province,
-              zipCode: _addresses[i].zipCode,
-              isDefault: false,
-            );
-          }
-        }
+    try {
+      final token = await ApiService.getToken();
+      if (token == null) {
+        _error = 'Authentication token not found';
+        return;
       }
 
-      _addresses[index] = DeliveryAddress(
-        id: id,
-        street: street,
-        barangay: barangay,
-        municipality: municipality,
-        province: province,
-        zipCode: zipCode,
-        isDefault: isDefault,
-      );
+      final result = await AddressService.getCustomerAddresses(token: token);
+
+      if (result['success']) {
+        _addresses = result['data'] as List<DeliveryAddress>;
+      } else {
+        _error = result['message'];
+      }
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isLoading = false;
       notifyListeners();
     }
   }
 
-  void deleteAddress(String id) {
-    _addresses.removeWhere((address) => address.id == id);
+  // Create a new address
+  Future<bool> createAddress({
+    required String label,
+    required String recipientName,
+    required String phoneNumber,
+    required String street,
+    required String city,
+    required String state,
+    required String zipCode,
+    String country = 'Philippines',
+    bool isDefault = false,
+  }) async {
+    try {
+      final token = await ApiService.getToken();
+      if (token == null) {
+        _error = 'Authentication token not found';
+        notifyListeners();
+        return false;
+      }
+
+      final result = await AddressService.createAddress(
+        label: label,
+        recipientName: recipientName,
+        phoneNumber: phoneNumber,
+        street: street,
+        city: city,
+        state: state,
+        zipCode: zipCode,
+        country: country,
+        isDefault: isDefault,
+        token: token,
+      );
+
+      if (result['success']) {
+        await loadAddresses(); // Reload addresses to get the updated list
+        return true;
+      } else {
+        _error = result['message'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Update an address
+  Future<bool> updateAddress({
+    required String addressId,
+    String? label,
+    String? recipientName,
+    String? phoneNumber,
+    String? street,
+    String? city,
+    String? state,
+    String? zipCode,
+    String? country,
+    bool? isDefault,
+  }) async {
+    try {
+      final token = await ApiService.getToken();
+      if (token == null) {
+        _error = 'Authentication token not found';
+        notifyListeners();
+        return false;
+      }
+
+      final result = await AddressService.updateAddress(
+        addressId: addressId,
+        label: label,
+        recipientName: recipientName,
+        phoneNumber: phoneNumber,
+        street: street,
+        city: city,
+        state: state,
+        zipCode: zipCode,
+        country: country,
+        isDefault: isDefault,
+        token: token,
+      );
+
+      if (result['success']) {
+        await loadAddresses(); // Reload addresses to get the updated list
+        return true;
+      } else {
+        _error = result['message'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Delete an address
+  Future<bool> deleteAddress(String addressId) async {
+    try {
+      final token = await ApiService.getToken();
+      if (token == null) {
+        _error = 'Authentication token not found';
+        notifyListeners();
+        return false;
+      }
+
+      final result = await AddressService.deleteAddress(
+        addressId: addressId,
+        token: token,
+      );
+
+      if (result['success']) {
+        await loadAddresses(); // Reload addresses to get the updated list
+        return true;
+      } else {
+        _error = result['message'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Set default address
+  Future<bool> setDefaultAddress(String addressId) async {
+    try {
+      final token = await ApiService.getToken();
+      if (token == null) {
+        _error = 'Authentication token not found';
+        notifyListeners();
+        return false;
+      }
+
+      final result = await AddressService.setDefaultAddress(
+        addressId: addressId,
+        token: token,
+      );
+
+      if (result['success']) {
+        await loadAddresses(); // Reload addresses to get the updated list
+        return true;
+      } else {
+        _error = result['message'];
+        notifyListeners();
+        return false;
+      }
+    } catch (e) {
+      _error = e.toString();
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Clear error
+  void clearError() {
+    _error = null;
     notifyListeners();
   }
 
-  void setDefaultAddress(String id) {
-    for (var i = 0; i < _addresses.length; i++) {
-      _addresses[i] = DeliveryAddress(
-        id: _addresses[i].id,
-        street: _addresses[i].street,
-        barangay: _addresses[i].barangay,
-        municipality: _addresses[i].municipality,
-        province: _addresses[i].province,
-        zipCode: _addresses[i].zipCode,
-        isDefault: _addresses[i].id == id,
-      );
-    }
-    notifyListeners();
+  // Refresh addresses
+  Future<void> refreshAddresses() async {
+    await loadAddresses();
   }
 } 

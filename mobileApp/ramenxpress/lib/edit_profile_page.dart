@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'providers/profile_provider.dart';
+import 'providers/auth_provider.dart';
 
 class EditProfilePage extends StatefulWidget {
   const EditProfilePage({super.key});
@@ -11,25 +11,55 @@ class EditProfilePage extends StatefulWidget {
 
 class _EditProfilePageState extends State<EditProfilePage> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _emailController;
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
   late TextEditingController _phoneController;
 
   @override
   void initState() {
     super.initState();
-    final profile = Provider.of<ProfileProvider>(context, listen: false);
-    _nameController = TextEditingController(text: profile.name);
-    _emailController = TextEditingController(text: profile.email);
-    _phoneController = TextEditingController(text: profile.phone);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final customer = authProvider.customer;
+    
+    _firstNameController = TextEditingController(text: customer?.firstName ?? '');
+    _lastNameController = TextEditingController(text: customer?.lastName ?? '');
+    _phoneController = TextEditingController(text: customer?.phoneNumber ?? '');
   }
 
   @override
   void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
+    _firstNameController.dispose();
+    _lastNameController.dispose();
     _phoneController.dispose();
     super.dispose();
+  }
+
+  Future<void> _saveProfile() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final success = await authProvider.updateProfile(
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      phoneNumber: _phoneController.text.trim(),
+    );
+
+    if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile updated successfully'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context);
+    } else if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(authProvider.error ?? 'Failed to update profile'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   @override
@@ -38,16 +68,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
       appBar: AppBar(
         title: const Text('Edit Profile'),
         actions: [
-          TextButton(
-            onPressed: _saveProfile,
-            child: const Text(
-              'Save',
-              style: TextStyle(
-                color: Colors.deepOrange,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
+          Consumer<AuthProvider>(
+            builder: (context, authProvider, child) {
+              return TextButton(
+                onPressed: authProvider.isLoading ? null : _saveProfile,
+                child: authProvider.isLoading
+                    ? const SizedBox(
+                        height: 16,
+                        width: 16,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                        ),
+                      )
+                    : const Text(
+                        'Save',
+                        style: TextStyle(
+                          color: Color(0xFFD32D43),
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+              );
+            },
           ),
         ],
       ),
@@ -58,66 +101,67 @@ class _EditProfilePageState extends State<EditProfilePage> {
           child: Column(
             children: [
               // Profile Image
-              Center(
-                child: Stack(
-                  children: [
-                    CircleAvatar(
-                      radius: 50,
-                      backgroundImage: AssetImage(
-                        Provider.of<ProfileProvider>(context).profileImage,
-                      ),
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      right: 0,
-                      child: Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: const BoxDecoration(
-                          color: Colors.deepOrange,
-                          shape: BoxShape.circle,
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  final customer = authProvider.customer;
+                  return Center(
+                    child: Stack(
+                      children: [
+                        CircleAvatar(
+                          radius: 50,
+                          backgroundImage: customer?.profileImage != null
+                              ? NetworkImage(customer!.profileImage!)
+                              : const AssetImage('assets/adminPIC.png') as ImageProvider,
                         ),
-                        child: const Icon(
-                          Icons.camera_alt,
-                          color: Colors.white,
-                          size: 20,
+                        Positioned(
+                          bottom: 0,
+                          right: 0,
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Color(0xFFD32D43),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.camera_alt,
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  );
+                },
               ),
               const SizedBox(height: 32),
 
-              // Name Field
+              // First Name Field
               TextFormField(
-                controller: _nameController,
+                controller: _firstNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Full Name',
+                  labelText: 'First Name',
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your name';
+                    return 'Please enter your first name';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Email Field
+              // Last Name Field
               TextFormField(
-                controller: _emailController,
+                controller: _lastNameController,
                 decoration: const InputDecoration(
-                  labelText: 'Email',
+                  labelText: 'Last Name',
                   border: OutlineInputBorder(),
                 ),
-                keyboardType: TextInputType.emailAddress,
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your email';
-                  }
-                  if (!value.contains('@')) {
-                    return 'Please enter a valid email';
+                    return 'Please enter your last name';
                   }
                   return null;
                 },
@@ -136,7 +180,29 @@ class _EditProfilePageState extends State<EditProfilePage> {
                   if (value == null || value.isEmpty) {
                     return 'Please enter your phone number';
                   }
+                  if (value.length < 10) {
+                    return 'Please enter a valid phone number';
+                  }
                   return null;
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Email Field (Read-only)
+              Consumer<AuthProvider>(
+                builder: (context, authProvider, child) {
+                  final customer = authProvider.customer;
+                  return TextFormField(
+                    initialValue: customer?.email ?? '',
+                    decoration: InputDecoration(
+                      labelText: 'Email',
+                      border: const OutlineInputBorder(),
+                      filled: true,
+                      fillColor: Colors.grey[100],
+                    ),
+                    enabled: false,
+                    style: TextStyle(color: Colors.grey[600]),
+                  );
                 },
               ),
             ],
@@ -144,24 +210,5 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
       ),
     );
-  }
-
-  void _saveProfile() {
-    if (_formKey.currentState!.validate()) {
-      Provider.of<ProfileProvider>(context, listen: false).updateProfile(
-        name: _nameController.text,
-        email: _emailController.text,
-        phone: _phoneController.text,
-      );
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Profile updated successfully'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      Navigator.pop(context);
-    }
   }
 } 

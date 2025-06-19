@@ -14,21 +14,26 @@ class EditAddressPage extends StatefulWidget {
 
 class _EditAddressPageState extends State<EditAddressPage> {
   final _formKey = GlobalKey<FormState>();
+  final _labelController = TextEditingController();
+  final _recipientNameController = TextEditingController();
+  final _phoneNumberController = TextEditingController();
   final _streetController = TextEditingController();
-  final _barangayController = TextEditingController();
-  final _municipalityController = TextEditingController();
-  final _provinceController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _stateController = TextEditingController();
   final _zipCodeController = TextEditingController();
   bool _isDefault = false;
+  bool _isLoading = false;
 
   @override
   void initState() {
     super.initState();
     if (widget.address != null) {
+      _labelController.text = widget.address!.label;
+      _recipientNameController.text = widget.address!.recipientName;
+      _phoneNumberController.text = widget.address!.phoneNumber;
       _streetController.text = widget.address!.street;
-      _barangayController.text = widget.address!.barangay;
-      _municipalityController.text = widget.address!.municipality;
-      _provinceController.text = widget.address!.province;
+      _cityController.text = widget.address!.city;
+      _stateController.text = widget.address!.state;
       _zipCodeController.text = widget.address!.zipCode;
       _isDefault = widget.address!.isDefault;
     }
@@ -36,40 +41,74 @@ class _EditAddressPageState extends State<EditAddressPage> {
 
   @override
   void dispose() {
+    _labelController.dispose();
+    _recipientNameController.dispose();
+    _phoneNumberController.dispose();
     _streetController.dispose();
-    _barangayController.dispose();
-    _municipalityController.dispose();
-    _provinceController.dispose();
+    _cityController.dispose();
+    _stateController.dispose();
     _zipCodeController.dispose();
     super.dispose();
   }
 
-  void _saveAddress() {
+  void _saveAddress() async {
     if (_formKey.currentState!.validate()) {
+      setState(() {
+        _isLoading = true;
+      });
+
       final provider = context.read<DeliveryAddressesProvider>();
+      bool success = false;
       
       if (widget.address != null) {
-        provider.updateAddress(
-          id: widget.address!.id,
+        success = await provider.updateAddress(
+          addressId: widget.address!.id,
+          label: _labelController.text,
+          recipientName: _recipientNameController.text,
+          phoneNumber: _phoneNumberController.text,
           street: _streetController.text,
-          barangay: _barangayController.text,
-          municipality: _municipalityController.text,
-          province: _provinceController.text,
+          city: _cityController.text,
+          state: _stateController.text,
           zipCode: _zipCodeController.text,
           isDefault: _isDefault,
         );
       } else {
-        provider.addAddress(
+        success = await provider.createAddress(
+          label: _labelController.text,
+          recipientName: _recipientNameController.text,
+          phoneNumber: _phoneNumberController.text,
           street: _streetController.text,
-          barangay: _barangayController.text,
-          municipality: _municipalityController.text,
-          province: _provinceController.text,
+          city: _cityController.text,
+          state: _stateController.text,
           zipCode: _zipCodeController.text,
           isDefault: _isDefault,
         );
       }
 
-      Navigator.pop(context);
+      setState(() {
+        _isLoading = false;
+      });
+
+      if (success && mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              widget.address == null
+                  ? 'Address added successfully'
+                  : 'Address updated successfully',
+            ),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      } else if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(provider.error ?? 'Failed to save address'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -90,10 +129,57 @@ class _EditAddressPageState extends State<EditAddressPage> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
+                controller: _labelController,
+                decoration: const InputDecoration(
+                  labelText: 'Address Label (e.g., Home, Office)',
+                  hintText: 'Enter address label',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter address label';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _recipientNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Recipient Name',
+                  hintText: 'Enter recipient name',
+                  border: OutlineInputBorder(),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter recipient name';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _phoneNumberController,
+                decoration: const InputDecoration(
+                  labelText: 'Phone Number',
+                  hintText: 'Enter phone number',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.phone,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter phone number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              TextFormField(
                 controller: _streetController,
                 decoration: const InputDecoration(
                   labelText: 'Street Address',
                   hintText: 'Enter your street address',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -104,42 +190,30 @@ class _EditAddressPageState extends State<EditAddressPage> {
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _barangayController,
+                controller: _cityController,
                 decoration: const InputDecoration(
-                  labelText: 'Barangay',
-                  hintText: 'Enter your barangay',
+                  labelText: 'City',
+                  hintText: 'Enter your city',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your barangay';
+                    return 'Please enter your city';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
               TextFormField(
-                controller: _municipalityController,
+                controller: _stateController,
                 decoration: const InputDecoration(
-                  labelText: 'Municipality/City',
-                  hintText: 'Enter your municipality or city',
+                  labelText: 'State/Province',
+                  hintText: 'Enter your state or province',
+                  border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please enter your municipality or city';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 16),
-              TextFormField(
-                controller: _provinceController,
-                decoration: const InputDecoration(
-                  labelText: 'Province',
-                  hintText: 'Enter your province',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your province';
+                    return 'Please enter your state or province';
                   }
                   return null;
                 },
@@ -150,6 +224,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
                 decoration: const InputDecoration(
                   labelText: 'ZIP Code',
                   hintText: 'Enter your ZIP code',
+                  border: OutlineInputBorder(),
                 ),
                 keyboardType: TextInputType.number,
                 validator: (value) {
@@ -171,12 +246,13 @@ class _EditAddressPageState extends State<EditAddressPage> {
                     _isDefault = value;
                   });
                 },
+                activeColor: Colors.deepOrange,
               ),
               const SizedBox(height: 32),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: _saveAddress,
+                  onPressed: _isLoading ? null : _saveAddress,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.deepOrange,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -184,13 +260,22 @@ class _EditAddressPageState extends State<EditAddressPage> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  child: Text(
-                    widget.address == null ? 'Add Address' : 'Save Changes',
-                    style: const TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : Text(
+                          widget.address == null ? 'Add Address' : 'Save Changes',
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                 ),
               ),
             ],
