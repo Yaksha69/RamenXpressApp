@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../services/websocket_service.dart';
-import 'dart:convert';
 
 class NotificationItem {
   final String id;
@@ -30,62 +29,34 @@ class NotificationsProvider extends ChangeNotifier {
 
   void initWebSocket() {
     _ws = WebSocketService();
-    _ws!.connect('http://localhost:3000'); // Socket.IO server URL
-    _ws!.messageStream.listen((event) {
-      final data = _parseEvent(event);
-      if (data != null) {
-        addNotification(data);
-      }
-    });
-  }
-
-  NotificationItem? _parseEvent(Map<String, dynamic> event) {
-    try {
-      if (event.containsKey('orderId') && event.containsKey('status')) {
-        return NotificationItem(
-          id: event['orderId'].toString(),
-          title: 'Order Status Updated',
-          message: 'Order #${event['orderId']} status: ${event['status']}',
-          timestamp: DateTime.now(),
-          imageUrl: 'assets/logo.png',
-        );
-      } else if (event.containsKey('orderId') && event.containsKey('items')) {
-        return NotificationItem(
-          id: event['orderId'].toString(),
+    _ws!.initialize('', customerId: null); // URL will be determined by the service
+    
+    // Set up event listeners
+    _ws!.onOrderPlaced = (orderData) {
+      addNotification(
+        NotificationItem(
+          id: orderData['orderId'].toString(),
           title: 'New Order Placed',
-          message: 'Order #${event['orderId']} has been placed.',
+          message: 'Order #${orderData['orderId']} has been placed.',
           timestamp: DateTime.now(),
           imageUrl: 'assets/logo.png',
-        );
-      } else if (event['type'] == 'inventoryUpdated') {
-        return NotificationItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: 'Inventory Updated',
-          message: 'Inventory item updated.',
+        ),
+      );
+    };
+    
+    _ws!.onOrderStatusUpdated = (statusData) {
+      addNotification(
+        NotificationItem(
+          id: statusData['orderId'].toString(),
+          title: 'Order Status Updated',
+          message: 'Order #${statusData['orderId']} status: ${statusData['status']}',
           timestamp: DateTime.now(),
           imageUrl: 'assets/logo.png',
-        );
-      } else if (event.containsKey('salePlaced')) {
-        return NotificationItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: 'New Sale',
-          message: 'A new sale has been placed.',
-          timestamp: DateTime.now(),
-          imageUrl: 'assets/logo.png',
-        );
-      } else if (event['type'] == 'notification') {
-        return NotificationItem(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          title: event['title'] ?? 'Notification',
-          message: event['message'] ?? '',
-          timestamp: DateTime.now(),
-          imageUrl: 'assets/logo.png',
-        );
-      }
-    } catch (e) {
-      print('Error parsing notification event: $e');
-    }
-    return null;
+        ),
+      );
+    };
+    
+    _ws!.connect();
   }
 
   void addNotification(NotificationItem notification) {
@@ -133,7 +104,7 @@ class NotificationsProvider extends ChangeNotifier {
 
   // Subscribe to notifications for a specific user
   void subscribeToNotifications(String userId) {
-    _ws?.subscribeToNotifications(userId);
+    _ws?.joinCustomerRoom(userId);
   }
 
   // Dispose WebSocket connection

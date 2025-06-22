@@ -35,30 +35,49 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     }
   }
 
-  Color _getStatusColor(String status) {
+  Color _getStatusBackgroundColor(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
-        return const Color(0xFFD32D43); // Red
+        return Colors.orange.withOpacity(0.2);
       case 'preparing':
-        return const Color(0xFF1A1A1A); // Black
+        return Colors.blue.withOpacity(0.2);
       case 'ready':
-        return const Color(0xFFD32D43); // Red
+        return Colors.green.withOpacity(0.2);
       case 'delivered':
-        return const Color(0xFF1A1A1A); // Black
+        return Colors.green.withOpacity(0.2);
       case 'cancelled':
-        return const Color(0xFFD32D43); // Red
+        return Colors.red.withOpacity(0.2);
       default:
-        return const Color(0xFF1A1A1A); // Black
+        return Colors.grey.withOpacity(0.2);
+    }
+  }
+
+  Color _getStatusTextColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return Colors.orange.shade800;
+      case 'preparing':
+        return Colors.blue.shade800;
+      case 'ready':
+        return Colors.green.shade800;
+      case 'delivered':
+        return Colors.green.shade800;
+      case 'cancelled':
+        return Colors.red.shade800;
+      default:
+        return Colors.grey.shade800;
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     final orders = context.watch<OrderHistoryProvider>().orders;
     final currencyFormat = NumberFormat.currency(symbol: '₱');
     final dateFormat = DateFormat('MMM d, yyyy h:mm a');
 
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: RefreshIndicator(
         onRefresh: _loadOrders,
         child: CustomScrollView(
@@ -67,23 +86,23 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
               floating: true,
               pinned: true,
               expandedHeight: 120,
-              backgroundColor: Colors.white,
+              backgroundColor: colorScheme.surface,
               flexibleSpace: FlexibleSpaceBar(
                 background: Container(
-                  color: Colors.white,
+                  color: colorScheme.surface,
                   padding: const EdgeInsets.only(top: 60, left: 16, right: 16),
                   child: Row(
                     children: [
-                      const Text(
+                      Text(
                         'Order History',
                         style: TextStyle(
-                          color: Color(0xFF1A1A1A),
+                          color: colorScheme.onSurface,
                           fontSize: 24,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
                       const Spacer(),
-                      CircleAvatar(
+                      const CircleAvatar(
                         backgroundImage: AssetImage('assets/adminPIC.png'),
                         radius: 20,
                       ),
@@ -104,12 +123,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                             opacity: const AlwaysStoppedAnimation(0.5),
                           ),
                           const SizedBox(height: 24),
-                          const Text(
+                          Text(
                             'No orders yet',
                             style: TextStyle(
-                              fontSize: 20,
+                              fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A1A1A),
+                              color: colorScheme.onSurface,
                             ),
                           ),
                           const SizedBox(height: 8),
@@ -117,7 +136,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                             'Your order history will appear here',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Color(0xFF1A1A1A),
+                              color: colorScheme.onSurface.withOpacity(0.7),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -137,217 +156,13 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                               style: TextStyle(
                                 fontSize: 18,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF1A1A1A),
+                                color: colorScheme.onSurface,
                               ),
                             ),
                           ),
                           ...orders.map((order) {
                             // Format order ID to be 5 digits
-                            final orderId = (order.orderId ?? 0).toString().padLeft(4, '0');
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                horizontal: 0,
-                                vertical: 8,
-                              ),
-                              child: InkWell(
-                                onTap: () async {
-                                  print('🔍 DEBUG: Starting invoice fetch for order ${order.orderId}');
-                                  try {
-                                    // Get token
-                                    final token = await ApiService.getToken();
-                                    if (token == null) {
-                                      print('❌ DEBUG: No authentication token found');
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(
-                                          content: Text('Authentication token not found'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                      return;
-                                    }
-                                    print('✅ DEBUG: Token obtained successfully');
-
-                                    // Fetch invoice data from backend
-                                    print('🔍 DEBUG: Calling OrderService.getOrderInvoice with orderId: ${order.orderId}');
-                                    final result = await OrderService.getOrderInvoice(
-                                      orderId: order.orderId,
-                                      token: token,
-                                    );
-                                    print('🔍 DEBUG: OrderService result: $result');
-
-                                    if (result['success']) {
-                                      final invoiceData = result['data'];
-                                      print('🔍 DEBUG: Invoice data received: $invoiceData');
-                                      print('🔍 DEBUG: orderId from API: ${invoiceData['orderId']}');
-                                      print('🔍 DEBUG: orderDate from API: ${invoiceData['orderDate']}');
-                                      print('🔍 DEBUG: status from API: ${invoiceData['status']}');
-                                      print('🔍 DEBUG: paymentMethod from API: ${invoiceData['paymentMethod']}');
-                                      
-                                      // Navigate to invoice page with backend data
-                                      final orderData = {
-                                        'orderId': invoiceData['orderId'] ?? orderId,
-                                        'date': invoiceData['orderDate'] != null 
-                                            ? DateTime.parse(invoiceData['orderDate'])
-                                            : order.orderDate,
-                                        'status': invoiceData['status'] ?? order.status,
-                                        'total': (invoiceData['total'] ?? order.total).toDouble(),
-                                        'items': (invoiceData['items'] as List?)?.map<Map<String, dynamic>>((item) => {
-                                          'name': item['name'] ?? 'Unknown Item',
-                                          'price': (item['price'] ?? 0.0).toDouble(),
-                                          'quantity': item['quantity'] ?? 0,
-                                          'addons': item['addOns']?.map((addon) => addon['name']).toList() ?? [],
-                                        }).toList() ?? order.items.map((item) => {
-                                          'name': item.name,
-                                          'price': item.price,
-                                          'quantity': item.quantity,
-                                          'addons': item.addOns.map((addon) => addon.name).toList(),
-                                        }).toList(),
-                                        'deliveryMethod': invoiceData['orderType'] ?? order.orderType,
-                                        'deliveryAddress': invoiceData['deliveryAddress'] != null 
-                                            ? DeliveryAddress.fromJson(invoiceData['deliveryAddress'])
-                                            : order.deliveryAddress,
-                                        'paymentMethod': PaymentMethod(
-                                          id: '1',
-                                          type: (invoiceData['paymentMethod'] == 'gcash' || invoiceData['paymentMethod'] == null)
-                                              ? PaymentType.gcash 
-                                              : PaymentType.paymaya,
-                                          title: invoiceData['paymentMethod'] == 'cash' 
-                                              ? 'Cash on Delivery' 
-                                              : (invoiceData['paymentMethod']?.toUpperCase() ?? 'GCASH'),
-                                          accountName: invoiceData['paymentMethod'] == 'cash' ? 'N/A' : 'Customer',
-                                          accountNumber: invoiceData['paymentMethod'] == 'cash' ? 'N/A' : '****',
-                                          isDefault: false,
-                                        ),
-                                        'notes': invoiceData['notes'] ?? order.notes,
-                                      };
-                                      
-                                      print('🔍 DEBUG: Final order data for invoice: $orderData');
-                                      print('🔍 DEBUG: Navigating to InvoicePage...');
-                                      
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => InvoicePage(order: orderData),
-                                        ),
-                                      );
-                                    } else {
-                                      print('❌ DEBUG: API call failed: ${result['message']}');
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        SnackBar(
-                                          content: Text(result['message'] ?? 'Failed to fetch invoice'),
-                                          backgroundColor: Colors.red,
-                                        ),
-                                      );
-                                    }
-                                  } catch (e, stackTrace) {
-                                    print('❌ DEBUG: Exception occurred: $e');
-                                    print('❌ DEBUG: Stack trace: $stackTrace');
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text('Error: ${e.toString()}'),
-                                        backgroundColor: Colors.red,
-                                      ),
-                                    );
-                                  }
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.all(16),
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          SizedBox(
-                                            width: 120,
-                                            child: Text(
-                                              'Order #${orderId ?? 'N/A'}',
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: Color(0xFF1A1A1A),
-                                              ),
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                              horizontal: 12,
-                                              vertical: 6,
-                                            ),
-                                            decoration: BoxDecoration(
-                                              color: _getStatusColor(order.status).withAlpha((0.08 * 255).toInt()),
-                                              borderRadius: BorderRadius.circular(20),
-                                            ),
-                                            child: Text(
-                                              order.status,
-                                              style: TextStyle(
-                                                color: _getStatusColor(order.status),
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Text(
-                                        dateFormat.format(order.orderDate),
-                                        style: TextStyle(
-                                          color: Color(0xFF1A1A1A),
-                                          fontSize: 14,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 12),
-                                      Row(
-                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                        children: [
-                                          SizedBox(
-                                            width: MediaQuery.of(context).size.width * 0.5,
-                                            child: Column(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
-                                              children: [
-                                                Text(
-                                                  'Delivery: ${order.orderType}',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF1A1A1A),
-                                                    fontSize: 12,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Text(
-                                                  'Payment: ${order.paymentMethod == 'cash' ? 'Cash on Delivery' : order.paymentMethod.toUpperCase()}',
-                                                  style: TextStyle(
-                                                    color: Color(0xFF1A1A1A),
-                                                    fontSize: 12,
-                                                  ),
-                                                  overflow: TextOverflow.ellipsis,
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          SizedBox(
-                                            width: MediaQuery.of(context).size.width * 0.25,
-                                            child: Text(
-                                              currencyFormat.format(order.total),
-                                              style: const TextStyle(
-                                                fontWeight: FontWeight.bold,
-                                                fontSize: 16,
-                                                color: Color(0xFF1A1A1A),
-                                              ),
-                                              textAlign: TextAlign.right,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            );
+                            return _OrderCard(order: order, getStatusBackgroundColor: _getStatusBackgroundColor, getStatusTextColor: _getStatusTextColor,);
                           }).toList(),
                         ],
                       ),
@@ -358,10 +173,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.2),
+              color: colorScheme.onSurface.withOpacity(0.2),
               spreadRadius: 1,
               blurRadius: 10,
               offset: const Offset(0, -1),
@@ -387,17 +202,247 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
             }
           },
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.shopping_cart), label: 'Cart'),
+            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
-          selectedItemColor: Color(0xFFD32D43),
-          unselectedItemColor: Color(0xFF1A1A1A),
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor: Colors.white,
+          selectedItemColor: colorScheme.primary,
+          unselectedItemColor: colorScheme.onSurface,
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          backgroundColor: colorScheme.surface,
           type: BottomNavigationBarType.fixed,
+        ),
+      ),
+    );
+  }
+}
+
+class _OrderCard extends StatelessWidget {
+  const _OrderCard({
+    required this.order,
+    required this.getStatusBackgroundColor,
+    required this.getStatusTextColor,
+  });
+
+  final dynamic order;
+  final Color Function(String) getStatusBackgroundColor;
+  final Color Function(String) getStatusTextColor;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final currencyFormat = NumberFormat.currency(symbol: '₱');
+    final dateFormat = DateFormat('MMM d, yyyy h:mm a');
+    final orderId = order.orderId.toString().padLeft(4, '0');
+
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: 0,
+        vertical: 8,
+      ),
+      child: InkWell(
+        highlightColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.1),
+        splashColor: Theme.of(context).colorScheme.onSurface.withOpacity(0.05),
+        onTap: () async {
+          try {
+            // Get token
+            final token = await ApiService.getToken();
+            if (token == null) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Authentication token not found'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+              return;
+            }
+
+            // Fetch invoice data from backend
+            final result = await OrderService.getOrderInvoice(
+              orderId: order.orderId,
+              token: token,
+            );
+
+            if (!context.mounted) return;
+
+            if (result['success']) {
+              final invoiceData = result['data'];
+
+              // Navigate to invoice page with backend data
+              final orderData = {
+                'orderId': invoiceData['orderId'] ?? orderId,
+                'date': invoiceData['orderDate'] != null
+                    ? DateTime.parse(invoiceData['orderDate'])
+                    : order.orderDate,
+                'status': invoiceData['status'] ?? order.status,
+                'total': (invoiceData['total'] ?? order.total).toDouble(),
+                'items': (invoiceData['items'] as List?)
+                    ?.map<Map<String, dynamic>>((item) => {
+                  'name': item['name'] ?? 'Unknown Item',
+                  'price': (item['price'] ?? 0.0).toDouble(),
+                  'quantity': item['quantity'] ?? 0,
+                  'addons':
+                  item['addOns']?.map((addon) => addon['name']).toList() ??
+                      [],
+                })
+                    .toList() ??
+                    order.items
+                        .map((item) => {
+                      'name': item.name,
+                      'price': item.price,
+                      'quantity': item.quantity,
+                      'addons':
+                      item.addOns.map((addon) => addon.name).toList(),
+                    })
+                        .toList(),
+                'deliveryMethod':
+                invoiceData['orderType'] ?? order.orderType,
+                'deliveryAddress': invoiceData['deliveryAddress'] != null
+                    ? DeliveryAddress.fromJson(invoiceData['deliveryAddress'])
+                    : order.deliveryAddress,
+                'paymentMethod': PaymentMethod(
+                  id: '1',
+                  type: (invoiceData['paymentMethod'] == 'gcash' ||
+                      invoiceData['paymentMethod'] == null)
+                      ? PaymentType.gcash
+                      : PaymentType.paymaya,
+                  title: invoiceData['paymentMethod'] == 'cash'
+                      ? 'Cash on Delivery'
+                      : (invoiceData['paymentMethod']?.toUpperCase() ?? 'GCASH'),
+                  accountName: invoiceData['paymentMethod'] == 'cash'
+                      ? 'N/A'
+                      : 'Customer',
+                  accountNumber: invoiceData['paymentMethod'] == 'cash'
+                      ? 'N/A'
+                      : '****',
+                  isDefault: false,
+                ),
+                'notes': invoiceData['notes'] ?? order.notes,
+              };
+
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => InvoicePage(order: orderData),
+                ),
+              );
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(result['message'] ?? 'Failed to fetch invoice'),
+                  backgroundColor: colorScheme.primary,
+                ),
+              );
+            }
+          } catch (e) {
+            if (!context.mounted) return;
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Error: ${e.toString()}'),
+                backgroundColor: colorScheme.primary,
+              ),
+            );
+          }
+        },
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: 120,
+                    child: Text(
+                      'Order #$orderId',
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: colorScheme.onSurface,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 6,
+                    ),
+                    decoration: BoxDecoration(
+                      color: getStatusBackgroundColor(order.status),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      order.status,
+                      style: TextStyle(
+                        color: getStatusTextColor(order.status),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              Text(
+                dateFormat.format(order.orderDate),
+                style: TextStyle(
+                  color: colorScheme.onSurface,
+                  fontSize: 14,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.5,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Delivery: ${order.orderType}',
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Payment: ${order.paymentMethod == 'cash' ? 'Cash on Delivery' : order.paymentMethod.toUpperCase()}',
+                          style: TextStyle(
+                            color: colorScheme.onSurface,
+                            fontSize: 12,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  SizedBox(
+                    width: MediaQuery.of(context).size.width * 0.25,
+                    child: Text(
+                      currencyFormat.format(order.total),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16,
+                        color: colorScheme.onSurface,
+                      ),
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -186,7 +186,8 @@ class _DeliveryAddressesPageState extends State<DeliveryAddressesPage> {
                               TextButton(
                                 onPressed: () async {
                                   final success = await provider.setDefaultAddress(address.id);
-                                  if (success && mounted) {
+                                  if (!mounted) return;
+                                  if (success) {
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       const SnackBar(
                                         content: Text('Default address updated'),
@@ -228,7 +229,8 @@ class _DeliveryAddressesPageState extends State<DeliveryAddressesPage> {
                                         onPressed: () async {
                                           Navigator.pop(context);
                                           final success = await provider.deleteAddress(address.id);
-                                          if (success && mounted) {
+                                          if (!mounted) return;
+                                          if (success) {
                                             ScaffoldMessenger.of(context).showSnackBar(
                                               const SnackBar(
                                                 content: Text('Address deleted successfully'),

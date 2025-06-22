@@ -116,6 +116,17 @@
 
           <!-- Right Column -->
           <div class="col-12 col-lg-4">
+            <!-- Real-time Orders Section -->
+            <div class="card shadow rounded-4 p-3 mb-4">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h4 class="fw-bold mb-0">Real-time Orders</h4>
+                <span class="badge bg-success" id="wsStatus">Connected</span>
+              </div>
+              <div id="realtimeOrders" class="list-group list-group-flush">
+                <!-- Orders will be populated here via WebSocket -->
+              </div>
+            </div>
+            
             <div class="card shadow rounded-4 p-3 mb-4">
               <h4 class="fw-bold mb-2">Order Types</h4>
               <div class="bg-light rounded-3 p-2 d-flex align-items-center justify-content-center">
@@ -155,8 +166,173 @@
   <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Socket.IO Client -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <!-- Your Chart JS -->
   <script src="../js/dashboard-charts.js"></script>
+  <!-- WebSocket Script -->
+  <script>
+    // WebSocket functionality
+    const socket = io('http://localhost:3000', {
+      transports: ['websocket']
+    });
+
+    const wsStatus = document.getElementById('wsStatus');
+    const realtimeOrders = document.getElementById('realtimeOrders');
+
+    // Join admin room
+    socket.emit('join-admin');
+
+    // Connection events
+    socket.on('connect', () => {
+      console.log('🔌 Connected to WebSocket server');
+      wsStatus.textContent = 'Connected';
+      wsStatus.className = 'badge bg-success';
+    });
+
+    socket.on('disconnect', () => {
+      console.log('🔌 Disconnected from WebSocket server');
+      wsStatus.textContent = 'Disconnected';
+      wsStatus.className = 'badge bg-danger';
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('❌ WebSocket connection error:', error);
+      wsStatus.textContent = 'Error';
+      wsStatus.className = 'badge bg-warning';
+    });
+
+    // Order events
+    socket.on('orderPlaced', (orderData) => {
+      console.log('📦 New order placed:', orderData);
+      addOrderToRealtimeList(orderData);
+      showOrderNotification(orderData);
+    });
+
+    socket.on('orderStatusUpdated', (statusData) => {
+      console.log('🔄 Order status updated:', statusData);
+      updateOrderStatus(statusData);
+      showStatusNotification(statusData);
+    });
+
+    function addOrderToRealtimeList(orderData) {
+      const orderElement = document.createElement('div');
+      orderElement.className = 'list-group-item border-0 border-bottom';
+      orderElement.id = `order-${orderData.orderId}`;
+      
+      const orderTypeBadge = orderData.orderType === 'delivery' ? 'bg-primary' : 
+                           orderData.orderType === 'takeout' ? 'bg-warning' : 'bg-info';
+      
+      orderElement.innerHTML = `
+        <div class="d-flex justify-content-between align-items-start">
+          <div>
+            <h6 class="mb-1">Order #${orderData.orderId}</h6>
+            <p class="mb-1 small text-muted">${orderData.items.length} items • ₱${orderData.total.toFixed(2)}</p>
+            <span class="badge ${orderTypeBadge}">${orderData.orderType}</span>
+            <span class="badge bg-secondary">${orderData.status}</span>
+          </div>
+          <small class="text-muted">${new Date(orderData.orderDate).toLocaleTimeString()}</small>
+        </div>
+      `;
+      
+      realtimeOrders.insertBefore(orderElement, realtimeOrders.firstChild);
+      
+      // Keep only last 10 orders
+      if (realtimeOrders.children.length > 10) {
+        realtimeOrders.removeChild(realtimeOrders.lastChild);
+      }
+    }
+
+    function updateOrderStatus(statusData) {
+      const orderElement = document.getElementById(`order-${statusData.orderId}`);
+      if (orderElement) {
+        const statusBadge = orderElement.querySelector('.badge.bg-secondary');
+        if (statusBadge) {
+          statusBadge.textContent = statusData.status;
+          
+          // Update badge color based on status
+          statusBadge.className = 'badge ';
+          switch (statusData.status) {
+            case 'pending':
+              statusBadge.className += 'bg-warning';
+              break;
+            case 'confirmed':
+              statusBadge.className += 'bg-info';
+              break;
+            case 'preparing':
+              statusBadge.className += 'bg-primary';
+              break;
+            case 'ready':
+              statusBadge.className += 'bg-success';
+              break;
+            case 'delivered':
+              statusBadge.className += 'bg-dark';
+              break;
+            case 'cancelled':
+              statusBadge.className += 'bg-danger';
+              break;
+            default:
+              statusBadge.className += 'bg-secondary';
+          }
+        }
+      }
+    }
+
+    function showOrderNotification(orderData) {
+      // Create a toast notification
+      const toast = document.createElement('div');
+      toast.className = 'toast align-items-center text-white bg-success border-0 position-fixed top-0 end-0 m-3';
+      toast.setAttribute('role', 'alert');
+      toast.setAttribute('aria-live', 'assertive');
+      toast.setAttribute('aria-atomic', 'true');
+      
+      toast.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="fas fa-bell me-2"></i>
+            New order #${orderData.orderId} received!
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      
+      document.body.appendChild(toast);
+      const bsToast = new bootstrap.Toast(toast);
+      bsToast.show();
+      
+      // Remove toast after it's hidden
+      toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+      });
+    }
+
+    function showStatusNotification(statusData) {
+      const toast = document.createElement('div');
+      toast.className = 'toast align-items-center text-white bg-info border-0 position-fixed top-0 end-0 m-3';
+      toast.setAttribute('role', 'alert');
+      toast.setAttribute('aria-live', 'assertive');
+      toast.setAttribute('aria-atomic', 'true');
+      
+      toast.innerHTML = `
+        <div class="d-flex">
+          <div class="toast-body">
+            <i class="fas fa-sync-alt me-2"></i>
+            Order #${statusData.orderId} status: ${statusData.status}
+          </div>
+          <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+      `;
+      
+      document.body.appendChild(toast);
+      const bsToast = new bootstrap.Toast(toast);
+      bsToast.show();
+      
+      // Remove toast after it's hidden
+      toast.addEventListener('hidden.bs.toast', () => {
+        document.body.removeChild(toast);
+      });
+    }
+  </script>
   <!-- Sidebar Toggle Script -->
   <script>
     const sidebar = document.querySelector('.sidebar');
@@ -243,6 +419,11 @@
         </div>
       </div>
     </div>
+  </div>
+  
+  <!-- Toast Container for Notifications -->
+  <div class="toast-container position-fixed top-0 end-0 p-3">
+    <!-- Toasts will be dynamically added here -->
   </div>
 </body>
 </html>

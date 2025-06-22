@@ -85,11 +85,12 @@ class _EditAddressPageState extends State<EditAddressPage> {
         );
       }
 
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
 
-      if (success && mounted) {
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -101,7 +102,7 @@ class _EditAddressPageState extends State<EditAddressPage> {
           ),
         );
         Navigator.pop(context);
-      } else if (mounted) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(provider.error ?? 'Failed to save address'),

@@ -69,11 +69,12 @@ class _EditPaymentMethodPageState extends State<EditPaymentMethodPage> {
         );
       }
 
+      if (!mounted) return;
       setState(() {
         _isLoading = false;
       });
 
-      if (success && mounted) {
+      if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
@@ -85,7 +86,7 @@ class _EditPaymentMethodPageState extends State<EditPaymentMethodPage> {
           ),
         );
         Navigator.pop(context);
-      } else if (mounted) {
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(provider.error ?? 'Failed to save payment method'),
@@ -140,17 +141,17 @@ class _EditPaymentMethodPageState extends State<EditPaymentMethodPage> {
                   });
                 },
                 style: ButtonStyle(
-                  backgroundColor: MaterialStateProperty.resolveWith<Color>(
-                    (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.selected)) {
+                  backgroundColor: WidgetStateProperty.resolveWith<Color>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
                         return Colors.deepOrange.withAlpha((0.08 * 255).toInt());
                       }
                       return Colors.grey[50]!;
                     },
                   ),
-                  foregroundColor: MaterialStateProperty.resolveWith<Color>(
-                    (Set<MaterialState> states) {
-                      if (states.contains(MaterialState.selected)) {
+                  foregroundColor: WidgetStateProperty.resolveWith<Color>(
+                    (Set<WidgetState> states) {
+                      if (states.contains(WidgetState.selected)) {
                         return Colors.deepOrange;
                       }
                       return Colors.grey;

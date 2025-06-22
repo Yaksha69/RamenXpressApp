@@ -44,7 +44,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
       phoneNumber: _phoneController.text.trim(),
     );
 
-    if (success && mounted) {
+    if (!mounted) return;
+    if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile updated successfully'),
@@ -52,7 +53,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
       );
       Navigator.pop(context);
-    } else if (mounted) {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(authProvider.error ?? 'Failed to update profile'),

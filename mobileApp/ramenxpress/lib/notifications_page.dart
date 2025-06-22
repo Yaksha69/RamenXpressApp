@@ -81,7 +81,7 @@ class NotificationsPage extends StatelessWidget {
                   leading: CircleAvatar(
                     backgroundColor: notification.isRead
                         ? Colors.grey[200]
-                        : Colors.deepOrange.withOpacity(0.1),
+                        : Colors.deepOrange.withValues(red: 255, green: 87, blue: 34, alpha: 26),
                     child: notification.imageUrl != null
                         ? Image.asset(
                             notification.imageUrl!,

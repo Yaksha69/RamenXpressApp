@@ -8,7 +8,7 @@ const fs = require('fs');
 const PORT = process.env.PORT;
 const MONGO_URI = process.env.MONGO_URI;
 const http = require('http');
-const { Server } = require('socket.io');
+const { initializeWebSocket } = require('./websocket');
 
 const InventoryRoutes = require('./routes/InventoryRoutes');
 const MenuRoutes = require('./routes/MenuRoutes');
@@ -18,26 +18,38 @@ const CustomerRoutes = require('./routes/CustomerRoutes');
 const AddressRoutes = require('./routes/AddressRoutes');
 const PaymentMethodRoutes = require('./routes/PaymentMethodRoutes');
 const CustomerOrderRoutes = require('./routes/CustomerOrderRoutes');
+const MobileOrderRoutes = require('./routes/MobileOrderRoutes');
 const { verifyToken, isAdmin, isCashier } = require('./middleware/AuthMiddleware');
 
 const app = express();
 
 // Configure CORS
 app.use(cors({
-    origin: [
-        'http://127.0.0.1:5500', // Frontend origin
-        'http://localhost:3000', // Backend origin
-        'http://localhost:59261', // Mobile app origin
-        'http://localhost:8080', // Alternative port
-        'http://localhost:5000', // Alternative port
-        'http://localhost:50522', // Flutter web app origin
-        'http://10.0.2.2:3000', // Android emulator
-        'http://10.0.2.2:8080', // Android emulator alternative
-        ''
-    ],
+    origin: function (origin, callback) {
+        // Allow requests with no origin (like mobile apps or Postman)
+        if (!origin) return callback(null, true);
+        
+        // Allow any localhost port for development
+        if (origin.startsWith('http://localhost:') || 
+            origin.startsWith('http://127.0.0.1:') ||
+            origin.startsWith('http://10.0.2.2:')) {
+            return callback(null, true);
+        }
+        
+        // Allow specific production origins if needed
+        const allowedOrigins = [
+            'https://your-production-domain.com', // Add your production domain here
+        ];
+        
+        if (allowedOrigins.includes(origin)) {
+            return callback(null, true);
+        }
+        
+        callback(new Error('Not allowed by CORS'));
+    },
     credentials: true, // Allow credentials
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 }));
 
 app.use(express.json());
@@ -58,6 +70,7 @@ app.use(mapper + '/auth', AuthRoutes);
 app.use(mapper + '/customer', CustomerRoutes);
 app.use(mapper + '/addresses', AddressRoutes);
 app.use(mapper + '/customer-orders', CustomerOrderRoutes);
+app.use(mapper + '/mobile-orders', MobileOrderRoutes);
 app.use(mapper + '/inventory', verifyToken, isAdmin, InventoryRoutes);
 app.use(mapper + '/menu', verifyToken, isCashier, MenuRoutes);
 app.use(mapper + '/menu-public', MenuRoutes);
@@ -76,26 +89,8 @@ app.use((err, req, res, next) => {
 });
 
 const server = http.createServer(app);
-const io = new Server(server, {
-  cors: {
-    origin: [
-      'http://127.0.0.1:5500',
-      'http://localhost:3000',
-      'http://localhost:59261',
-      'http://localhost:8080',
-      'http://localhost:5000',
-      'http://localhost:50522',
-      'http://10.0.2.2:3000',
-      'http://10.0.2.2:8080',
-      ''
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-  }
-});
 
-// Export io for use in controllers
-module.exports.io = io;
+// Initialize WebSocket
+const io = initializeWebSocket(server);
 
 server.listen(PORT, () => console.log(`Server running on port ${PORT}`));

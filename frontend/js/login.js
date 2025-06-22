@@ -15,6 +15,8 @@ async function handleLogin(event) {
     errorMessage.style.display = 'none';
     
     try {
+        console.log('Attempting login with:', { username, role });
+        
         // Make API request
         const response = await fetch(`${API_URL}/auth/login`, {
             method: 'POST',
@@ -26,22 +28,35 @@ async function handleLogin(event) {
         });
         
         const data = await response.json();
+        console.log('Login response:', data);
         
         if (!response.ok) {
             throw new Error(data.message || 'Login failed');
         }
         
         // Check if user role matches selected role
-        if (data.user.role !== role) {
-            throw new Error('Invalid role selected');
+        // Backend returns user data in 'customer' property
+        if (!data.customer) {
+            throw new Error('Invalid response format: missing customer data');
+        }
+        
+        if (data.customer.role !== role) {
+            throw new Error(`Invalid role selected. Expected: ${role}, Got: ${data.customer.role}`);
         }
 
         // Store the token in localStorage
         if (data.token) {
             localStorage.setItem('authToken', data.token);
             // Also store user info
-            localStorage.setItem('userRole', data.user.role);
-            localStorage.setItem('username', data.user.username);
+            localStorage.setItem('userRole', data.customer.role);
+            localStorage.setItem('username', data.customer.username);
+            localStorage.setItem('userId', data.customer.id);
+            
+            console.log('Login successful, stored data:', {
+                role: data.customer.role,
+                username: data.customer.username,
+                userId: data.customer.id
+            });
         } else {
             throw new Error('No authentication token received');
         }
@@ -49,7 +64,10 @@ async function handleLogin(event) {
         // Redirect based on role
         if (role === 'admin') {
             window.location.href = './html/dashboard.html';
+        } else if (role === 'cashier') {
+            window.location.href = './html/POS.html';
         } else {
+            // Default fallback
             window.location.href = './html/POS.html';
         }
         

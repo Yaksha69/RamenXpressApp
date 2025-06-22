@@ -4,21 +4,20 @@ import '../models/order.dart';
 import 'api_service.dart';
 
 class OrderService {
-  static const String baseUrl = ApiService.baseUrl;
-
   // Place a new order
   static Future<Map<String, dynamic>> placeOrder({
     required List<Map<String, dynamic>> items,
     required String orderType,
     required String paymentMethod,
-    String? customerId,
-    Map<String, dynamic>? deliveryAddress,
+    required double total,
+    double deliveryFee = 0.0,
     String? notes,
+    Map<String, dynamic>? deliveryAddress,
     required String token,
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/v1/customer-orders/place-order'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/customer-orders'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -27,13 +26,14 @@ class OrderService {
           'items': items,
           'orderType': orderType,
           'paymentMethod': paymentMethod,
-          'customerId': customerId,
-          'deliveryAddress': deliveryAddress,
+          'total': total,
+          'deliveryFee': deliveryFee,
           'notes': notes,
+          'deliveryAddress': deliveryAddress,
         }),
       );
 
-      if (response.statusCode == 200) {
+      if (response.statusCode == 200 || response.statusCode == 201) {
         final data = jsonDecode(response.body);
         return {
           'success': true,
@@ -59,28 +59,23 @@ class OrderService {
 
   // Get customer orders
   static Future<Map<String, dynamic>> getCustomerOrders({
-    required String customerId, // Keep for compatibility but not used in URL
+    required String customerId,
     required String token,
   }) async {
-    print('🔍 OrderService: Getting customer orders');
-    print('🔍 OrderService: URL: $baseUrl/api/v1/customer-orders/orders');
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/customer-orders/orders'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/customer-orders/customer/$customerId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
 
-      print('🔍 OrderService: Response status: ${response.statusCode}');
-      print('🔍 OrderService: Response body: ${response.body}');
-
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        final List<Order> orders = data.map((json) => Order.fromJson(json)).toList();
-        
-        print('🔍 OrderService: Successfully converted ${orders.length} orders');
+        final data = jsonDecode(response.body);
+        final orders = (data['orders'] as List<dynamic>)
+            .map((orderJson) => Order.fromJson(orderJson))
+            .toList();
         
         return {
           'success': true,
@@ -88,19 +83,15 @@ class OrderService {
         };
       } else {
         final data = jsonDecode(response.body);
-        print('🔍 OrderService: Error response: $data');
         return {
           'success': false,
           'message': data['message'] ?? 'Failed to fetch orders',
-          'error': data['error'],
         };
       }
     } catch (e) {
-      print('🔍 OrderService: Exception: $e');
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',
-        'error': e.toString(),
       };
     }
   }
@@ -112,7 +103,7 @@ class OrderService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/customer-orders/order/$orderId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/customer-orders/order/$orderId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -152,7 +143,7 @@ class OrderService {
   }) async {
     try {
       final response = await http.put(
-        Uri.parse('$baseUrl/api/v1/customer-orders/order/$orderId/status'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/customer-orders/order/$orderId/status'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -191,38 +182,29 @@ class OrderService {
     required int orderId,
     required String token,
   }) async {
-    print('🔍 DEBUG: OrderService.getOrderInvoice called with orderId: $orderId');
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/customer-orders/invoice/$orderId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/customer-orders/invoice/$orderId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
       );
       
-      print('🔍 DEBUG: API Response status: ${response.statusCode}');
-      print('🔍 DEBUG: API Response body: ${response.body}');
-      
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        print('🔍 DEBUG: Parsed response data: $data');
         return {
           'success': true,
           'data': data,
         };
       } else {
-        print('❌ DEBUG: API call failed with status: ${response.statusCode}');
         final errorData = jsonDecode(response.body);
-        print('❌ DEBUG: Error response: $errorData');
         return {
           'success': false,
           'message': errorData['message'] ?? 'Failed to fetch invoice',
         };
       }
-    } catch (e, stackTrace) {
-      print('❌ DEBUG: Exception in getOrderInvoice: $e');
-      print('❌ DEBUG: Stack trace: $stackTrace');
+    } catch (e) {
       return {
         'success': false,
         'message': 'Network error: ${e.toString()}',

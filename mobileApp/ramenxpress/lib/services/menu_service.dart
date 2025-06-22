@@ -4,13 +4,11 @@ import '../models/menu_item.dart';
 import 'api_service.dart';
 
 class MenuService {
-  static const String baseUrl = ApiService.baseUrl;
-
   // Get all menu items
-  static Future<Map<String, dynamic>> getAllMenus() async {
+  static Future<Map<String, dynamic>> getAllMenuItems() async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/menu-public/allmenu'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/menu-public/allmenu'),
         headers: {
           'Content-Type': 'application/json',
         },
@@ -54,7 +52,7 @@ class MenuService {
   static Future<Map<String, dynamic>> getMenusByCategory(String category) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/menu-public/category/$category'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/menu-public/category/$category'),
         headers: {
           'Content-Type': 'application/json',
         },

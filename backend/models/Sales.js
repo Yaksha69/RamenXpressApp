@@ -53,6 +53,11 @@ const SalesSchema = new mongoose.Schema({
     enum: ['gcash', 'paymaya', 'cash'],
     required: true
   },
+  paymentStatus: {
+    type: String,
+    enum: ['Paid', 'Pending', 'Refunded', 'Failed'],
+    default: 'Pending'
+  },
   deliveryAddress: {
     street: String,
     city: String,
@@ -77,6 +82,14 @@ const SalesSchema = new mongoose.Schema({
   orderDate: {
     type: Date,
     default: Date.now
+  },
+  cancellationReason: {
+    type: String,
+    default: null
+  },
+  cancelledAt: {
+    type: Date,
+    default: null
   }
 });
 

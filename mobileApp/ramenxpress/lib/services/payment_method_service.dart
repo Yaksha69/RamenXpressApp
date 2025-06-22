@@ -4,15 +4,19 @@ import '../models/payment_method.dart';
 import 'api_service.dart';
 
 class PaymentMethodService {
-  static const String baseUrl = ApiService.baseUrl;
-
-  // Get all payment methods for the authenticated customer
-  static Future<Map<String, dynamic>> getCustomerPaymentMethods({
-    required String token,
-  }) async {
+  // Get all payment methods
+  static Future<Map<String, dynamic>> getAllPaymentMethods() async {
     try {
+      final token = await ApiService.getToken();
+      if (token == null) {
+        return {
+          'success': false,
+          'message': 'No authentication token found',
+        };
+      }
+
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/payment-methods'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/payment-methods'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -53,7 +57,7 @@ class PaymentMethodService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/payment-methods/$paymentMethodId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/payment-methods/$paymentMethodId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -96,7 +100,7 @@ class PaymentMethodService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/v1/payment-methods'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/payment-methods'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -155,7 +159,7 @@ class PaymentMethodService {
       if (isDefault != null) updateData['isDefault'] = isDefault;
 
       final response = await http.put(
-        Uri.parse('$baseUrl/api/v1/payment-methods/$paymentMethodId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/payment-methods/$paymentMethodId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -196,7 +200,7 @@ class PaymentMethodService {
   }) async {
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/api/v1/payment-methods/$paymentMethodId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/payment-methods/$paymentMethodId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -233,7 +237,7 @@ class PaymentMethodService {
   }) async {
     try {
       final response = await http.patch(
-        Uri.parse('$baseUrl/api/v1/payment-methods/$paymentMethodId/default'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/payment-methods/$paymentMethodId/default'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

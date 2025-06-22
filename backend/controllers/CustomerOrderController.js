@@ -2,11 +2,15 @@ const Menu = require('../models/Menu');
 const Inventory = require('../models/Inventory');
 const Sales = require('../models/Sales');
 const Customer = require('../models/Customer');
-const { io } = require('../server');
+const { getIO } = require('../websocket');
 
 // Place a customer order from mobile app
 const placeCustomerOrder = async (req, res) => {
   try {
+    console.log('🔍 DEBUG: placeCustomerOrder called');
+    console.log('🔍 DEBUG: req.body:', req.body);
+    console.log('🔍 DEBUG: req.customerId:', req.customerId);
+    
     const { 
       items, 
       orderType, 
@@ -17,6 +21,15 @@ const placeCustomerOrder = async (req, res) => {
 
     // Get customer ID from authenticated customer
     const customerId = req.customerId;
+
+    console.log('🔍 DEBUG: Parsed data:', {
+      items,
+      orderType,
+      paymentMethod,
+      deliveryAddress,
+      notes,
+      customerId
+    });
 
     // Validate order type
     if (!orderType || !['takeout', 'dine-in', 'delivery'].includes(orderType)) {
@@ -43,15 +56,21 @@ const placeCustomerOrder = async (req, res) => {
       return res.status(400).json({ message: 'Invalid order items' });
     }
 
+    console.log('🔍 DEBUG: About to get next order ID');
     // Get next order ID
     const orderId = await Sales.getNextOrderId();
+    console.log('🔍 DEBUG: Got order ID:', orderId);
+    
     const orderItems = [];
     let totalAmount = 0;
 
     // Process each item in the order
     for (const item of items) {
+      console.log('🔍 DEBUG: Processing item:', item);
       const { menuId, quantity = 1, addOns = [] } = item;
       const menuItem = await Menu.findById(menuId);
+      
+      console.log('🔍 DEBUG: Found menu item:', menuItem);
       
       if (!menuItem) {
         return res.status(404).json({ message: `Menu item not found: ${menuId}` });
@@ -104,10 +123,13 @@ const placeCustomerOrder = async (req, res) => {
       });
     }
 
+    console.log('🔍 DEBUG: Processed all items, total amount:', totalAmount);
+
     // Calculate delivery fee
     const deliveryFee = orderType === 'delivery' ? 50.0 : 0.0;
     totalAmount += deliveryFee;
 
+    console.log('🔍 DEBUG: About to create sales record');
     // Create sales record
     const sale = new Sales({
       orderId,
@@ -123,9 +145,11 @@ const placeCustomerOrder = async (req, res) => {
       orderDate: new Date()
     });
 
+    console.log('🔍 DEBUG: About to save sale');
     await sale.save();
+    console.log('🔍 DEBUG: Sale saved successfully');
 
-    io.emit('orderPlaced', {
+    getIO().emit('orderPlaced', {
       orderId,
       items: orderItems,
       total: totalAmount,
@@ -138,7 +162,7 @@ const placeCustomerOrder = async (req, res) => {
       orderDate: sale.orderDate
     });
 
-    res.status(200).json({
+    const responseData = {
       message: 'Order placed successfully',
       orderDetails: {
         orderId,
@@ -152,10 +176,15 @@ const placeCustomerOrder = async (req, res) => {
         notes: notes || '',
         orderDate: sale.orderDate
       }
-    });
+    };
+
+    console.log('🔍 DEBUG: Sending response to client:', JSON.stringify(responseData, null, 2));
+    res.status(200).json(responseData);
+    console.log('🔍 DEBUG: Response sent successfully');
 
   } catch (error) {
-    console.error('Error placing customer order:', error);
+    console.error('❌ ERROR placing customer order:', error);
+    console.error('❌ ERROR stack:', error.stack);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 };
@@ -163,18 +192,23 @@ const placeCustomerOrder = async (req, res) => {
 // Get customer orders
 const getCustomerOrders = async (req, res) => {
   try {
-    // Use the authenticated customer's ID from the JWT token
-    const customerId = req.customerId;
+    // Get customer ID from route parameter or JWT token
+    const customerId = req.params.customerId || req.customerId;
     
     if (!customerId) {
       return res.status(400).json({ message: 'Customer ID is required' });
+    }
+
+    // Security check: ensure the authenticated customer can only access their own orders
+    if (req.customerId && req.customerId.toString() !== customerId) {
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     const orders = await Sales.find({ customerId })
       .sort({ orderDate: -1 })
       .populate('customerId', 'firstName lastName email phoneNumber');
 
-    res.status(200).json(orders);
+    res.status(200).json({ orders });
   } catch (error) {
     console.error('Error getting customer orders:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
@@ -185,12 +219,18 @@ const getCustomerOrders = async (req, res) => {
 const getOrderById = async (req, res) => {
   try {
     const { orderId } = req.params;
+    const customerId = req.customerId;
     
     const order = await Sales.findOne({ orderId: parseInt(orderId) })
       .populate('customerId', 'firstName lastName email phoneNumber');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Security check: ensure the authenticated customer can only access their own orders
+    if (customerId && order.customerId._id.toString() !== customerId.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
     }
 
     res.status(200).json(order);
@@ -205,6 +245,7 @@ const updateOrderStatus = async (req, res) => {
   try {
     const { orderId } = req.params;
     const { status } = req.body;
+    const customerId = req.customerId;
 
     if (!status || !['pending', 'confirmed', 'preparing', 'ready', 'delivered', 'cancelled'].includes(status)) {
       return res.status(400).json({ 
@@ -212,17 +253,23 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const order = await Sales.findOneAndUpdate(
-      { orderId: parseInt(orderId) },
-      { status },
-      { new: true }
-    ).populate('customerId', 'firstName lastName email phoneNumber');
+    const order = await Sales.findOne({ orderId: parseInt(orderId) })
+      .populate('customerId', 'firstName lastName email phoneNumber');
 
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    io.emit('orderStatusUpdated', { orderId, status });
+    // Security check: ensure the authenticated customer can only update their own orders
+    if (customerId && order.customerId._id.toString() !== customerId.toString()) {
+      return res.status(403).json({ message: 'Access denied' });
+    }
+
+    // Update the order status
+    order.status = status;
+    await order.save();
+
+    getIO().emit('orderStatusUpdated', { orderId, status });
 
     res.status(200).json({
       message: 'Order status updated successfully',
@@ -236,19 +283,11 @@ const updateOrderStatus = async (req, res) => {
 
 // Get invoice for a specific order (for the authenticated customer)
 const getOrderInvoice = async (req, res) => {
-  console.log('🔍 DEBUG: getOrderInvoice called');
-  console.log('🔍 DEBUG: req.params:', req.params);
-  console.log('🔍 DEBUG: req.customerId:', req.customerId);
-  
   try {
     const { orderId } = req.params;
     const customerId = req.customerId;
     
-    console.log('🔍 DEBUG: orderId from params:', orderId);
-    console.log('🔍 DEBUG: customerId from customerId:', customerId);
-    
     if (!orderId) {
-      console.log('❌ DEBUG: No orderId provided');
       return res.status(400).json({
         success: false,
         message: 'Order ID is required'
@@ -261,10 +300,7 @@ const getOrderInvoice = async (req, res) => {
       customerId: customerId
     }).populate('customerId', 'firstName lastName email phoneNumber');
     
-    console.log('🔍 DEBUG: Found order:', order);
-    
     if (!order) {
-      console.log('❌ DEBUG: Order not found');
       return res.status(404).json({
         success: false,
         message: 'Order not found'
@@ -294,11 +330,9 @@ const getOrderInvoice = async (req, res) => {
       }
     };
     
-    console.log('🔍 DEBUG: Formatted invoice data:', invoiceData);
-    
     res.json(invoiceData);
   } catch (error) {
-    console.log('❌ DEBUG: Error in getOrderInvoice:', error);
+    console.error('Error in getOrderInvoice:', error);
     res.status(500).json({
       success: false,
       message: 'Internal server error',

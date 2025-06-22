@@ -35,7 +35,7 @@ class MenuProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final result = await MenuService.getAllMenus();
+      final result = await MenuService.getAllMenuItems();
       
       if (result['success']) {
         _menuItems = result['data'];

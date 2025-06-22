@@ -2,20 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'providers/cart_provider.dart';
 import 'providers/menu_provider.dart';
-import 'providers/auth_provider.dart';
-import 'providers/profile_provider.dart';
-import 'providers/delivery_addresses_provider.dart';
-import 'providers/payment_methods_provider.dart';
-import 'providers/order_history_provider.dart';
 import 'models/menu_item.dart';
-import 'models/delivery_address.dart';
-import 'models/payment_method.dart';
-import 'payment_page.dart';
-import 'order_history_page.dart';
-import 'profile_page.dart';
-import 'delivery_addresses_page.dart';
-import 'payment_methods_page.dart';
-import 'notifications_page.dart';
+import 'services/api_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -44,17 +32,18 @@ class _HomePageState extends State<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F5F5),
+      backgroundColor: colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           // Welcome Row (no banner)
           SliverToBoxAdapter(
             child: Container(
               padding: const EdgeInsets.fromLTRB(20, 28, 20, 12),
-              decoration: const BoxDecoration(
-                color: Color(0xFFD32D43),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: colorScheme.primary,
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(28),
                   bottomRight: Radius.circular(28),
                 ),
@@ -62,7 +51,7 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  CircleAvatar(
+                  const CircleAvatar(
                     radius: 26,
                     backgroundImage: AssetImage('assets/adminPIC.png'),
                   ),
@@ -70,22 +59,22 @@ class _HomePageState extends State<HomePage> {
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
+                      children: [
                         Text(
                           'Welcome Back!',
                           style: TextStyle(
                             fontSize: 15,
-                            color: Colors.white70,
+                            color: colorScheme.onPrimary.withOpacity(0.7),
                             fontWeight: FontWeight.w400,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'RamenXpress',
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                            color: colorScheme.onPrimary,
                           ),
                         ),
                       ],
@@ -107,11 +96,11 @@ class _HomePageState extends State<HomePage> {
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
               child: Row(
-                children: const [
+                children: [
                   Text(
                     'Menu',
                     style: TextStyle(
-                      color: Color(0xFFD32D43),
+                      color: colorScheme.primary,
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
                     ),
@@ -131,10 +120,10 @@ class _HomePageState extends State<HomePage> {
                   controller: _searchController,
                   decoration: InputDecoration(
                     hintText: 'Search menu items...',
-                    prefixIcon: const Icon(Icons.search, size: 20, color: Color(0xFFD32D43)),
+                    prefixIcon: Icon(Icons.search, size: 20, color: colorScheme.primary),
                     suffixIcon: _searchController.text.isNotEmpty
                         ? IconButton(
-                            icon: const Icon(Icons.clear, color: Color(0xFFD32D43)),
+                            icon: Icon(Icons.clear, color: colorScheme.primary),
                             onPressed: () {
                               _searchController.clear();
                               Provider.of<MenuProvider>(context, listen: false).setSearchQuery('');
@@ -146,7 +135,7 @@ class _HomePageState extends State<HomePage> {
                       borderSide: BorderSide.none,
                     ),
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: colorScheme.surface,
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
                   onChanged: (value) {
@@ -182,13 +171,13 @@ class _HomePageState extends State<HomePage> {
                               menuProvider.setSelectedCategory(category);
                             },
                             backgroundColor: Colors.grey[200],
-                            selectedColor: const Color(0xFFD32D43),
+                            selectedColor: colorScheme.primary,
                             labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : Color(0xFFD32D43),
+                              color: isSelected ? colorScheme.onPrimary : colorScheme.primary,
                               fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                             ),
                             side: isSelected
-                                ? const BorderSide(color: Color(0xFFD32D43), width: 2)
+                                ? BorderSide(color: colorScheme.primary, width: 2)
                                 : BorderSide.none,
                             padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                           ),
@@ -207,9 +196,9 @@ class _HomePageState extends State<HomePage> {
               child: Consumer<MenuProvider>(
                 builder: (context, menuProvider, child) {
                   if (menuProvider.isLoading) {
-                    return const Center(
+                    return Center(
                       child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                        valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                       ),
                     );
                   }
@@ -220,7 +209,7 @@ class _HomePageState extends State<HomePage> {
                           Icon(
                             Icons.error_outline,
                             size: 64,
-                            color: Colors.grey[400],
+                            color: colorScheme.onSurface.withOpacity(0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -228,14 +217,14 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
+                              color: colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             menuProvider.error!,
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color: colorScheme.onSurface.withOpacity(0.6),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -243,7 +232,7 @@ class _HomePageState extends State<HomePage> {
                           ElevatedButton(
                             onPressed: () => menuProvider.loadMenuItems(),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFFD32D43),
+                              backgroundColor: colorScheme.primary,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
@@ -261,7 +250,7 @@ class _HomePageState extends State<HomePage> {
                           Icon(
                             Icons.restaurant_menu,
                             size: 64,
-                            color: Colors.grey[400],
+                            color: colorScheme.onSurface.withOpacity(0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -269,14 +258,14 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.grey[600],
+                              color: colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                           const SizedBox(height: 8),
                           Text(
                             'Try adjusting your search or category filter',
                             style: TextStyle(
-                              color: Colors.grey[500],
+                              color: colorScheme.onSurface.withOpacity(0.6),
                             ),
                             textAlign: TextAlign.center,
                           ),
@@ -308,10 +297,10 @@ class _HomePageState extends State<HomePage> {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withOpacity(0.08),
+              color: colorScheme.onSurface.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 8,
               offset: const Offset(0, -1),
@@ -342,11 +331,11 @@ class _HomePageState extends State<HomePage> {
             BottomNavigationBarItem(icon: Icon(Icons.history, size: 20), label: ''),
             BottomNavigationBarItem(icon: Icon(Icons.person, size: 20), label: ''),
           ],
-          selectedItemColor: Color(0xFFD32D43),
-          unselectedItemColor: Colors.grey,
+          selectedItemColor: colorScheme.primary,
+          unselectedItemColor: colorScheme.onSurface.withOpacity(0.6),
           showSelectedLabels: false,
           showUnselectedLabels: false,
-          backgroundColor: Colors.white,
+          backgroundColor: colorScheme.surface,
           type: BottomNavigationBarType.fixed,
         ),
       ),
@@ -354,15 +343,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   Widget _buildMenuItemCard(BuildContext context, MenuItem menuItem, MenuProvider menuProvider) {
+    final colorScheme = Theme.of(context).colorScheme;
     return GestureDetector(
       onTap: () => _showAddOnsModal(context, menuItem, menuProvider),
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(red: 128, green: 128, blue: 128, alpha: 26),
+              color: colorScheme.onSurface.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 4,
               offset: const Offset(0, 1),
@@ -379,7 +369,7 @@ class _HomePageState extends State<HomePage> {
                 width: double.infinity,
                 decoration: BoxDecoration(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
-                  color: Colors.grey[100], // Background color for images
+                  color: colorScheme.onSurface.withOpacity(0.05), // Background color for images
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
@@ -393,13 +383,13 @@ class _HomePageState extends State<HomePage> {
                       return Container(
                         width: double.infinity,
                         height: double.infinity,
-                        color: Colors.grey[100],
+                        color: colorScheme.onSurface.withOpacity(0.05),
                         child: Center(
                           child: CircularProgressIndicator(
                             value: loadingProgress.expectedTotalBytes != null
                                 ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
                                 : null,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                           ),
                         ),
                       );
@@ -408,11 +398,11 @@ class _HomePageState extends State<HomePage> {
                       return Container(
                         width: double.infinity,
                         height: double.infinity,
-                        color: Colors.grey[200],
-                        child: const Icon(
+                        color: colorScheme.onSurface.withOpacity(0.1),
+                        child: Icon(
                           Icons.image_not_supported,
                           size: 30,
-                          color: Colors.grey,
+                          color: colorScheme.onSurface.withOpacity(0.5),
                         ),
                       );
                     },
@@ -430,9 +420,10 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       menuItem.name,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 12,
+                        color: colorScheme.onSurface,
                       ),
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
@@ -443,17 +434,17 @@ class _HomePageState extends State<HomePage> {
                           ? menuItem.category 
                           : 'Menu Item',
                       style: TextStyle(
-                        color: Colors.grey[600],
+                        color: colorScheme.onSurface.withOpacity(0.7),
                         fontSize: 12,
                       ),
                     ),
                     const Spacer(),
                     Text(
                       '₱${menuItem.price.toStringAsFixed(2)}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Color(0xFFD32D43),
+                        color: colorScheme.primary,
                       ),
                     ),
                   ],
@@ -467,24 +458,16 @@ class _HomePageState extends State<HomePage> {
   }
 
   ImageProvider _getImageProvider(String imagePath) {
-    // Handle null or empty image paths
-    if (imagePath.isEmpty || imagePath.trim().isEmpty) {
-      return const AssetImage('assets/ramen1.jpg');
-    }
-    
-    // Check if it's a network image (starts with http)
-    if (imagePath.startsWith('http')) {
-      return NetworkImage(imagePath);
-    }
-    
-    // Check if it's a local asset
     if (imagePath.startsWith('assets/')) {
       return AssetImage(imagePath);
     }
     
+    // Get base URL based on platform
+    final baseUrl = ApiService.baseUrl;
+    
     // Check if it's an upload path (starts with /uploads/)
     if (imagePath.startsWith('/uploads/')) {
-      return NetworkImage('http://localhost:3000$imagePath');
+      return NetworkImage('$baseUrl$imagePath');
     }
     
     // Check if it's a full file path (like /Users/... or C:\...)
@@ -495,12 +478,12 @@ class _HomePageState extends State<HomePage> {
         filename = filename.split('\\').last;
       }
       // Try to serve from uploads directory
-      return NetworkImage('http://localhost:3000/uploads/$filename');
+      return NetworkImage('$baseUrl/uploads/$filename');
     }
     
     // If it's just a filename without path, try to serve from uploads
     if (imagePath.isNotEmpty && !imagePath.startsWith('assets/')) {
-      return NetworkImage('http://localhost:3000/uploads/$imagePath');
+      return NetworkImage('$baseUrl/uploads/$imagePath');
     }
     
     // Default fallback - use one of the existing ramen images
@@ -508,6 +491,7 @@ class _HomePageState extends State<HomePage> {
   }
 
   void _showAddOnsModal(BuildContext context, MenuItem menuItem, MenuProvider menuProvider) {
+    final colorScheme = Theme.of(context).colorScheme;
     List<Map<String, dynamic>> selectedAddOns = [];
     double totalPrice = menuItem.price;
 
@@ -520,20 +504,20 @@ class _HomePageState extends State<HomePage> {
       builder: (context) => StatefulBuilder(
         builder: (context, setState) => Container(
           height: MediaQuery.of(context).size.height * 0.6,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+          decoration: BoxDecoration(
+            color: colorScheme.surface,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
           ),
           child: Column(
             children: [
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: colorScheme.surface,
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(16)),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD32D43).withAlpha((0.08 * 255).toInt()),
+                      color: colorScheme.primary.withOpacity(0.08),
                       spreadRadius: 1,
                       blurRadius: 8,
                       offset: const Offset(0, 1),
@@ -548,13 +532,12 @@ class _HomePageState extends State<HomePage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A1A),
+                        color: colorScheme.onSurface,
                       ),
                     ),
                     IconButton(
                       onPressed: () => Navigator.pop(context),
-                      icon: const Icon(Icons.close, size: 20),
-                      color: Color(0xFF1A1A1A),
+                      icon: Icon(Icons.close, size: 20, color: colorScheme.onSurface),
                     ),
                   ],
                 ),
@@ -569,9 +552,9 @@ class _HomePageState extends State<HomePage> {
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Color(0xFFD32D43), width: 1),
+                          border: Border.all(color: colorScheme.primary, width: 1),
                         ),
                         child: Row(
                           children: [
@@ -581,7 +564,7 @@ class _HomePageState extends State<HomePage> {
                                 width: 60,
                                 height: 60,
                                 decoration: BoxDecoration(
-                                  color: Colors.grey[100],
+                                  color: colorScheme.onSurface.withOpacity(0.05),
                                   borderRadius: BorderRadius.circular(6),
                                 ),
                                 child: Image(
@@ -594,7 +577,7 @@ class _HomePageState extends State<HomePage> {
                                     return Container(
                                       width: 60,
                                       height: 60,
-                                      color: Colors.grey[100],
+                                      color: colorScheme.onSurface.withOpacity(0.05),
                                       child: Center(
                                         child: SizedBox(
                                           width: 20,
@@ -603,7 +586,7 @@ class _HomePageState extends State<HomePage> {
                                             value: loadingProgress.expectedTotalBytes != null
                                                 ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
                                                 : null,
-                                            valueColor: const AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                                             strokeWidth: 2,
                                           ),
                                         ),
@@ -615,13 +598,13 @@ class _HomePageState extends State<HomePage> {
                                       width: 60,
                                       height: 60,
                                       decoration: BoxDecoration(
-                                        color: Colors.grey[200],
+                                        color: colorScheme.onSurface.withOpacity(0.1),
                                         borderRadius: BorderRadius.circular(6),
                                       ),
-                                      child: const Icon(
+                                      child: Icon(
                                         Icons.image_not_supported,
                                         size: 20,
-                                        color: Colors.grey,
+                                        color: colorScheme.onSurface.withOpacity(0.5),
                                       ),
                                     );
                                   },
@@ -635,17 +618,17 @@ class _HomePageState extends State<HomePage> {
                                 children: [
                                   Text(
                                     menuItem.name,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 14,
-                                      color: Color(0xFF1A1A1A),
+                                      color: colorScheme.onSurface,
                                     ),
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
                                     '₱${totalPrice.toStringAsFixed(2)}',
                                     style: TextStyle(
-                                      color: Color(0xFF1A1A1A),
+                                      color: colorScheme.onSurface,
                                       fontSize: 12,
                                     ),
                                   ),
@@ -662,7 +645,7 @@ class _HomePageState extends State<HomePage> {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A1A),
+                          color: colorScheme.onSurface,
                         ),
                       ),
                       const SizedBox(height: 8),
@@ -687,7 +670,7 @@ class _HomePageState extends State<HomePage> {
                               }
                             });
                           },
-                          activeColor: Color(0xFFD32D43),
+                          activeColor: colorScheme.primary,
                         );
                       }).toList(),
                     ],
@@ -706,7 +689,7 @@ class _HomePageState extends State<HomePage> {
                             'Total:',
                             style: TextStyle(
                               fontSize: 14,
-                              color: Colors.grey[600],
+                              color: colorScheme.onSurface.withOpacity(0.7),
                             ),
                           ),
                           Text(
@@ -714,7 +697,7 @@ class _HomePageState extends State<HomePage> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFFD32D43),
+                              color: colorScheme.primary,
                             ),
                           ),
                         ],
@@ -735,17 +718,17 @@ class _HomePageState extends State<HomePage> {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
                             content: Text('${menuItem.name} added to cart'),
-                            backgroundColor: Colors.green,
+                            backgroundColor: colorScheme.primary,
                           ),
                         );
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Color(0xFFD32D43),
+                        backgroundColor: colorScheme.primary,
                         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                       ),
-                      child: const Text(
+                      child: Text(
                         'Add to Cart',
-                        style: TextStyle(color: Colors.white, fontSize: 12),
+                        style: TextStyle(color: colorScheme.onPrimary, fontSize: 12),
                       ),
                     ),
                   ],

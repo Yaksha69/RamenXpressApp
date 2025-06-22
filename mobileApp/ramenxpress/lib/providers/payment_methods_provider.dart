@@ -33,7 +33,7 @@ class PaymentMethodsProvider extends ChangeNotifier {
         return;
       }
 
-      final result = await PaymentMethodService.getCustomerPaymentMethods(token: token);
+      final result = await PaymentMethodService.getAllPaymentMethods();
 
       if (result['success']) {
         _paymentMethods = result['data'] as List<PaymentMethod>;

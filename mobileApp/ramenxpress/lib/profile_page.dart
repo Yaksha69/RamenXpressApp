@@ -11,24 +11,26 @@ class ProfilePage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
+      backgroundColor: colorScheme.surface,
       body: CustomScrollView(
         slivers: [
           SliverAppBar(
             floating: true,
             pinned: true,
             expandedHeight: 120,
-            backgroundColor: Colors.white,
+            backgroundColor: colorScheme.surface,
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
-                color: Colors.white,
+                color: colorScheme.surface,
                 padding: const EdgeInsets.only(top: 60, left: 16, right: 16),
-                child: const Row(
+                child: Row(
                   children: [
                     Text(
                       'Profile',
                       style: TextStyle(
-                        color: Color(0xFF1A1A1A),
+                        color: colorScheme.onSurface,
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
                       ),
@@ -48,9 +50,9 @@ class ProfilePage extends StatelessWidget {
                     builder: (context, authProvider, child) {
                       final customer = authProvider.customer;
                       if (customer == null) {
-                        return const Center(
+                        return Center(
                           child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFFD32D43)),
+                            valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
                           ),
                         );
                       }
@@ -58,11 +60,11 @@ class ProfilePage extends StatelessWidget {
                       return Container(
                         padding: const EdgeInsets.all(20),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: colorScheme.surface,
                           borderRadius: BorderRadius.circular(15),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.grey.withValues(red: 128, green: 128, blue: 128, alpha: 26),
+                              color: colorScheme.onSurface.withOpacity(0.1),
                               spreadRadius: 1,
                               blurRadius: 5,
                               offset: const Offset(0, 2),
@@ -84,16 +86,17 @@ class ProfilePage extends StatelessWidget {
                                 children: [
                                   Text(
                                     customer.fullName,
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 20,
                                       fontWeight: FontWeight.bold,
+                                      color: colorScheme.onSurface,
                                     ),
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
                                     customer.email,
                                     style: TextStyle(
-                                      color: Color(0xFF1A1A1A),
+                                      color: colorScheme.onSurface,
                                       fontSize: 14,
                                     ),
                                   ),
@@ -101,7 +104,7 @@ class ProfilePage extends StatelessWidget {
                                   Text(
                                     customer.phoneNumber,
                                     style: TextStyle(
-                                      color: Colors.grey[600],
+                                      color: colorScheme.onSurface.withOpacity(0.7),
                                       fontSize: 14,
                                     ),
                                   ),
@@ -116,14 +119,14 @@ class ProfilePage extends StatelessWidget {
                                       );
                                     },
                                     style: OutlinedButton.styleFrom(
-                                      side: const BorderSide(color: Color(0xFFD32D43)),
+                                      side: BorderSide(color: colorScheme.primary),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(8),
                                       ),
                                     ),
-                                    child: const Text(
+                                    child: Text(
                                       'Edit Profile',
-                                      style: TextStyle(color: Color(0xFFD32D43)),
+                                      style: TextStyle(color: colorScheme.primary),
                                     ),
                                   ),
                                 ],
@@ -151,6 +154,7 @@ class ProfilePage extends StatelessWidget {
                             ),
                           );
                         },
+                        colorScheme: colorScheme,
                       ),
                       _buildMenuItem(
                         Icons.location_on_outlined,
@@ -163,6 +167,7 @@ class ProfilePage extends StatelessWidget {
                             ),
                           );
                         },
+                        colorScheme: colorScheme,
                       ),
                       _buildMenuItem(
                         Icons.credit_card_outlined,
@@ -175,8 +180,10 @@ class ProfilePage extends StatelessWidget {
                             ),
                           );
                         },
+                        colorScheme: colorScheme,
                       ),
                     ],
+                    colorScheme: colorScheme,
                   ),
                   const SizedBox(height: 24),
 
@@ -195,18 +202,22 @@ class ProfilePage extends StatelessWidget {
                             ),
                           );
                         },
+                        colorScheme: colorScheme,
                       ),
                       _buildMenuItem(
                         Icons.language_outlined,
                         'Language',
                         () {},
+                        colorScheme: colorScheme,
                       ),
                       _buildMenuItem(
                         Icons.dark_mode_outlined,
                         'Dark Mode',
                         () {},
+                        colorScheme: colorScheme,
                       ),
                     ],
+                    colorScheme: colorScheme,
                   ),
                   const SizedBox(height: 24),
 
@@ -218,18 +229,22 @@ class ProfilePage extends StatelessWidget {
                         Icons.help_outline,
                         'Help Center',
                         () {},
+                        colorScheme: colorScheme,
                       ),
                       _buildMenuItem(
                         Icons.info_outline,
                         'About',
                         () {},
+                        colorScheme: colorScheme,
                       ),
                       _buildMenuItem(
                         Icons.privacy_tip_outlined,
                         'Privacy Policy',
                         () {},
+                        colorScheme: colorScheme,
                       ),
                     ],
+                    colorScheme: colorScheme,
                   ),
                   const SizedBox(height: 24),
 
@@ -245,12 +260,12 @@ class ProfilePage extends StatelessWidget {
                                   showDialog(
                                     context: context,
                                     builder: (context) => AlertDialog(
-                                      title: const Text('Logout'),
-                                      content: const Text('Are you sure you want to logout?'),
+                                      title: Text('Logout', style: TextStyle(color: colorScheme.onSurface)),
+                                      content: Text('Are you sure you want to logout?', style: TextStyle(color: colorScheme.onSurface)),
                                       actions: [
                                         TextButton(
                                           onPressed: () => Navigator.pop(context),
-                                          child: const Text('Cancel'),
+                                          child: Text('Cancel', style: TextStyle(color: colorScheme.primary)),
                                         ),
                                         TextButton(
                                           onPressed: () async {
@@ -260,9 +275,9 @@ class ProfilePage extends StatelessWidget {
                                               Navigator.pushReplacementNamed(context, '/login');
                                             }
                                           },
-                                          child: const Text(
+                                          child: Text(
                                             'Logout',
-                                            style: TextStyle(color: Color(0xFFD32D43)),
+                                            style: TextStyle(color: colorScheme.primary),
                                           ),
                                         ),
                                       ],
@@ -270,27 +285,28 @@ class ProfilePage extends StatelessWidget {
                                   );
                                 },
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFFD32D43),
-                            foregroundColor: Colors.white,
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: colorScheme.onPrimary,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: authProvider.isLoading
-                              ? const SizedBox(
+                              ? SizedBox(
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(colorScheme.onPrimary),
                                   ),
                                 )
-                              : const Text(
+                              : Text(
                                   'Logout',
                                   style: TextStyle(
                                     fontSize: 16,
                                     fontWeight: FontWeight.bold,
+                                    color: colorScheme.onPrimary,
                                   ),
                                 ),
                         ),
@@ -306,10 +322,10 @@ class ProfilePage extends StatelessWidget {
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: colorScheme.surface,
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.withValues(red: 128, green: 128, blue: 128, alpha: 26),
+              color: colorScheme.onSurface.withOpacity(0.1),
               spreadRadius: 1,
               blurRadius: 10,
               offset: const Offset(0, -1),
@@ -335,30 +351,31 @@ class ProfilePage extends StatelessWidget {
             }
           },
           items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.shopping_cart), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.history), label: ''),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: ''),
+            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+                icon: Icon(Icons.shopping_cart), label: 'Cart'),
+            BottomNavigationBarItem(icon: Icon(Icons.history), label: 'History'),
+            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
-          selectedItemColor: Colors.deepOrange,
-          unselectedItemColor: Colors.grey,
-          showSelectedLabels: false,
-          showUnselectedLabels: false,
-          backgroundColor: Colors.white,
+          selectedItemColor: colorScheme.primary,
+          unselectedItemColor: colorScheme.onSurface.withOpacity(0.7),
+          showSelectedLabels: true,
+          showUnselectedLabels: true,
+          backgroundColor: colorScheme.surface,
           type: BottomNavigationBarType.fixed,
         ),
       ),
     );
   }
 
-  Widget _buildSection(String title, List<Widget> items) {
+  Widget _buildSection(String title, List<Widget> items, {required ColorScheme colorScheme}) {
     return Container(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: colorScheme.surface,
         borderRadius: BorderRadius.circular(15),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withValues(red: 128, green: 128, blue: 128, alpha: 26),
+            color: colorScheme.onSurface.withOpacity(0.1),
             spreadRadius: 1,
             blurRadius: 5,
             offset: const Offset(0, 2),
@@ -372,13 +389,14 @@ class ProfilePage extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
+                color: colorScheme.onSurface,
               ),
             ),
           ),
-          const Divider(height: 1),
+          Divider(height: 1, color: colorScheme.onSurface.withOpacity(0.1)),
           ...items,
         ],
       ),
@@ -389,6 +407,7 @@ class ProfilePage extends StatelessWidget {
     IconData icon,
     String title,
     VoidCallback onTap, {
+    required ColorScheme colorScheme,
     Widget? trailing,
   }) {
     return InkWell(
@@ -402,15 +421,16 @@ class ProfilePage extends StatelessWidget {
           children: [
             Icon(
               icon,
-              color: Color(0xFF1A1A1A),
+              color: colorScheme.onSurface,
               size: 24,
             ),
             const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 16,
+                  color: colorScheme.onSurface,
                 ),
               ),
             ),
@@ -419,7 +439,7 @@ class ProfilePage extends StatelessWidget {
             else
               Icon(
                 Icons.chevron_right,
-                color: Color(0xFF1A1A1A),
+                color: colorScheme.onSurface,
               ),
           ],
         ),

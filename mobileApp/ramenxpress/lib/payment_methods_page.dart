@@ -161,7 +161,7 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                       children: [
                         Text(
                           method.accountName,
-                          style: TextStyle(
+                          style: const TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
                           ),
@@ -228,7 +228,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                                     onPressed: () async {
                                       Navigator.pop(context);
                                       final success = await provider.deletePaymentMethod(method.id);
-                                      if (success && mounted) {
+                                      if (!mounted) return;
+                                      if (success) {
                                         ScaffoldMessenger.of(context).showSnackBar(
                                           const SnackBar(
                                             content: Text('Payment method deleted successfully'),
@@ -252,7 +253,8 @@ class _PaymentMethodsPageState extends State<PaymentMethodsPage> {
                     onTap: () async {
                       if (!method.isDefault) {
                         final success = await provider.setDefaultPaymentMethod(method.id);
-                        if (success && mounted) {
+                        if (!mounted) return;
+                        if (success) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('Default payment method updated'),

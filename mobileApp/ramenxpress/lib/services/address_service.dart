@@ -4,15 +4,13 @@ import '../models/delivery_address.dart';
 import 'api_service.dart';
 
 class AddressService {
-  static const String baseUrl = ApiService.baseUrl;
-
   // Get all addresses for the authenticated customer
   static Future<Map<String, dynamic>> getCustomerAddresses({
     required String token,
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/addresses'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/addresses'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -53,7 +51,7 @@ class AddressService {
   }) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/api/v1/addresses/$addressId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/addresses/$addressId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -100,7 +98,7 @@ class AddressService {
   }) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/api/v1/addresses'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/addresses'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -171,7 +169,7 @@ class AddressService {
       if (isDefault != null) updateData['isDefault'] = isDefault;
 
       final response = await http.put(
-        Uri.parse('$baseUrl/api/v1/addresses/$addressId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/addresses/$addressId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -212,7 +210,7 @@ class AddressService {
   }) async {
     try {
       final response = await http.delete(
-        Uri.parse('$baseUrl/api/v1/addresses/$addressId'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/addresses/$addressId'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
@@ -249,7 +247,7 @@ class AddressService {
   }) async {
     try {
       final response = await http.patch(
-        Uri.parse('$baseUrl/api/v1/addresses/$addressId/default'),
+        Uri.parse('${ApiService.baseUrl}/api/v1/addresses/$addressId/default'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',

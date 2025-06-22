@@ -15,6 +15,7 @@ import 'providers/payment_methods_provider.dart';
 import 'providers/order_history_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/menu_provider.dart';
+import 'services/websocket_service.dart';
 
 void main() {
   runApp(
@@ -49,12 +50,8 @@ class MyApp extends StatelessWidget {
           primary: const Color(0xFFD32D43),
           secondary: const Color(0xFF1A1A1A), // Black
           tertiary: const Color(0xFFFFFFFF), // White
-          background: Colors.white,
           surface: Colors.white,
-          onPrimary: Colors.white,
-          onSecondary: Colors.white,
-          onBackground: Color(0xFF1A1A1A),
-          onSurface: Color(0xFF1A1A1A),
+          onSurface: const Color(0xFF1A1A1A),
         ),
         scaffoldBackgroundColor: Colors.white,
         appBarTheme: const AppBarTheme(
@@ -90,11 +87,11 @@ class MyApp extends StatelessWidget {
           fillColor: Colors.white,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Color(0xFF1A1A1A), width: 1),
+            borderSide: const BorderSide(color: Color(0xFF1A1A1A), width: 1),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: BorderSide(color: Color(0xFF1A1A1A), width: 1),
+            borderSide: const BorderSide(color: Color(0xFF1A1A1A), width: 1),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
@@ -204,15 +201,48 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   void _initializeWebSockets(String userId) {
-    // Initialize notifications WebSocket
-    final notificationsProvider = Provider.of<NotificationsProvider>(context, listen: false);
-    notificationsProvider.initWebSocket();
-    notificationsProvider.subscribeToNotifications(userId);
+    // Initialize WebSocket service
+    final webSocketService = WebSocketService();
+    webSocketService.initialize('', customerId: userId);
     
-    // Initialize order history WebSocket
-    final orderHistoryProvider = Provider.of<OrderHistoryProvider>(context, listen: false);
-    orderHistoryProvider.initWebSocket();
-    orderHistoryProvider.subscribeToOrders(userId);
+    // Set up event listeners
+    webSocketService.onOrderPlaced = (orderData) {
+      // Handle new order placed
+      if (mounted) {
+        final orderHistoryProvider = Provider.of<OrderHistoryProvider>(context, listen: false);
+        orderHistoryProvider.refreshOrders(userId);
+      }
+    };
+    
+    webSocketService.onOrderStatusUpdated = (statusData) {
+      // Handle order status updates
+      if (mounted) {
+        final orderHistoryProvider = Provider.of<OrderHistoryProvider>(context, listen: false);
+        orderHistoryProvider.refreshOrders(userId);
+        
+        // Show notification for status updates
+        final notificationsProvider = Provider.of<NotificationsProvider>(context, listen: false);
+        notificationsProvider.addNotification(
+          NotificationItem(
+            id: 'order-${statusData['orderId']}',
+            title: 'Order Status Updated',
+            message: 'Your order #${statusData['orderId']} status has been updated to ${statusData['status']}',
+            timestamp: DateTime.now(),
+          ),
+        );
+      }
+    };
+    
+    webSocketService.onConnected = () {
+      // WebSocket connected successfully
+    };
+    
+    webSocketService.onError = (error) {
+      // Handle WebSocket errors
+    };
+    
+    // Connect to WebSocket
+    webSocketService.connect();
   }
 
   @override

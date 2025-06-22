@@ -10,8 +10,8 @@ const {
 const { verifyCustomerToken } = require('../middleware/AuthMiddleware');
 
 // Customer order routes (require customer authentication)
-router.post('/place-order', verifyCustomerToken, placeCustomerOrder);
-router.get('/orders', verifyCustomerToken, getCustomerOrders);
+router.post('/', verifyCustomerToken, placeCustomerOrder);
+router.get('/customer/:customerId', verifyCustomerToken, getCustomerOrders);
 router.get('/order/:orderId', verifyCustomerToken, getOrderById);
 router.put('/order/:orderId/status', verifyCustomerToken, updateOrderStatus);
 router.get('/invoice/:orderId', verifyCustomerToken, getOrderInvoice);
