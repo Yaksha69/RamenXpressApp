@@ -38,7 +38,7 @@ Node.js backend API for the RamenXpress restaurant management system.
 - Token validation middleware
 
 ### Real-time Communication
-- WebSocket integration with Socket.io
+- Socket.IO integration for real-time updates
 - Live order status updates
 - Payment status notifications
 - Order cancellation alerts
@@ -114,7 +114,7 @@ Node.js backend API for the RamenXpress restaurant management system.
 | GET | `/api/payment-methods` | Get all payment methods | Yes |
 | POST | `/api/payment-methods` | Create payment method | Yes (Admin) |
 
-## 🔄 WebSocket Events
+## 🔄 Socket.IO Events
 
 ### Server Events
 | Event | Description | Data |
@@ -136,7 +136,7 @@ Node.js backend API for the RamenXpress restaurant management system.
 - **Framework**: Express.js
 - **Database**: MongoDB with Mongoose
 - **Authentication**: JWT
-- **Real-time**: Socket.io
+- **Real-time**: Socket.IO
 - **Validation**: Express-validator
 - **File Upload**: Multer
 

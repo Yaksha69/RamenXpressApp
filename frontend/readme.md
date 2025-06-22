@@ -45,7 +45,7 @@ Web interfaces for the RamenXpress restaurant management system.
 
 ### Common Features
 - Responsive design for all devices
-- Real-time WebSocket updates
+- Real-time Socket.IO updates
 - JWT authentication
 - Role-based access control
 - Modern UI with Bootstrap 5
@@ -97,7 +97,7 @@ Web interfaces for the RamenXpress restaurant management system.
 - **JavaScript (ES6+)**: Interactivity and API calls
 - **Bootstrap 5**: UI framework
 - **Chart.js**: Data visualization
-- **Socket.io**: Real-time updates
+- **Socket.IO**: Real-time updates
 - **SweetAlert2**: Notifications
 - **DateRangePicker**: Date filtering
 

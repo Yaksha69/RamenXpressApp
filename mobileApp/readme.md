@@ -52,7 +52,7 @@ Flutter mobile application for the RamenXpress restaurant.
 ### Real-time Features
 - Live order status updates
 - Push notifications
-- WebSocket integration
+- Socket.IO integration
 - Payment confirmations
 
 ## 📡 API Integration
@@ -95,7 +95,7 @@ Flutter mobile application for the RamenXpress restaurant.
 - **Framework**: Flutter (Dart)
 - **State Management**: Provider pattern
 - **HTTP Client**: Dio
-- **Real-time**: Socket.io
+- **Real-time**: Socket.IO
 - **Local Storage**: SharedPreferences
 - **UI**: Material Design 3
 
