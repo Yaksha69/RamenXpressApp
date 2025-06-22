@@ -1,38 +1,104 @@
-# Ramen Xpress Mobile App
+# RamenXpress Mobile App
 
-A Flutter mobile application for Ramen Xpress restaurant.
+Flutter mobile application for the RamenXpress restaurant.
 
-## Setup Instructions
+## 🚀 Quick Start
 
-1. Install Flutter SDK:
-   - Download Flutter SDK from https://flutter.dev/docs/get-started/install
-   - Add Flutter to your PATH
-   - Run `flutter doctor` to verify installation
+### Prerequisites
+- Flutter SDK (v3.0+)
+- Dart SDK (v3.0+)
+- Backend API server running
 
-2. Install VS Code Extensions:
-   - Flutter Extension
-   - Dart Extension
+### Installation
 
-3. Project Setup:
+1. **Install Flutter**
    ```bash
-   cd mobileApp
+   # Download from https://flutter.dev/docs/get-started/install
+   flutter doctor
+   ```
+
+2. **Setup project**
+   ```bash
+   cd mobileApp/ramenxpress
    flutter pub get
    ```
 
-4. Running the App:
-   - Connect a device or start an emulator
-   - Run `flutter run` in the terminal
-   - Or press F5 in VS Code
+3. **Run app**
+   ```bash
+   flutter run
+   ```
 
-## Testing
+## 📱 Features
 
-To run tests:
-```bash
-flutter test
-```
+### Authentication
+- User login and registration
+- Profile management
+- Password reset
+- Auto-login with JWT
 
-## Development
+### Menu & Ordering
+- Browse menu by categories
+- Search menu items
+- Add items to cart
+- Order customization with add-ons
+- Real-time order tracking
 
-- Use `flutter pub get` to update dependencies
-- Use `flutter pub upgrade` to upgrade dependencies
-- Use `flutter clean` to clean the build
+### Payment & Delivery
+- Multiple payment methods (GCash, PayMaya, COD)
+- Address management
+- Delivery tracking
+- Order history and reordering
+
+### Real-time Features
+- Live order status updates
+- Push notifications
+- WebSocket integration
+- Payment confirmations
+
+## 📡 API Integration
+
+### Authentication
+| Method | Endpoint | Usage |
+|--------|----------|-------|
+| POST | `/api/auth/login` | User login |
+| POST | `/api/auth/register` | User registration |
+
+### Menu
+| Method | Endpoint | Usage |
+|--------|----------|-------|
+| GET | `/api/menu` | Load menu items |
+| GET | `/api/menu/category/:category` | Get menu by category |
+
+### Orders
+| Method | Endpoint | Usage |
+|--------|----------|-------|
+| POST | `/api/v1/mobile-orders/orders` | Place new order |
+| GET | `/api/v1/mobile-orders/orders/:orderId` | Get order details |
+| GET | `/api/v1/mobile-orders/orders` | Get user orders |
+
+### Customer Management
+| Method | Endpoint | Usage |
+|--------|----------|-------|
+| GET | `/api/customers/profile` | Get user profile |
+| PUT | `/api/customers/profile` | Update profile |
+| POST | `/api/customers/addresses` | Add delivery address |
+| GET | `/api/customers/addresses` | Get user addresses |
+
+### Payment Methods
+| Method | Endpoint | Usage |
+|--------|----------|-------|
+| GET | `/api/payment-methods` | Get payment methods |
+| POST | `/api/customers/payment-methods` | Add payment method |
+
+## 🛠️ Tech Stack
+
+- **Framework**: Flutter (Dart)
+- **State Management**: Provider pattern
+- **HTTP Client**: Dio
+- **Real-time**: Socket.io
+- **Local Storage**: SharedPreferences
+- **UI**: Material Design 3
+
+## 📄 License
+
+MIT License 

@@ -1,261 +1,145 @@
-# RamenXpress Backend API Documentation
+# RamenXpress Backend API
 
-This is the backend API for the RamenXpress application, built with Node.js, Express, and MongoDB.
+Node.js backend API for the RamenXpress restaurant management system.
 
-## Setup Instructions
+## 🚀 Quick Start
 
-1. Install dependencies:
-```bash
-npm install
-```
+### Prerequisites
+- Node.js (v14+)
+- MongoDB (v4.4+)
 
-2. Create a `.env` file in the root directory with the following variables:
-```env
-PORT=3000
-MONGODB_URI=your_mongodb_connection_string
-```
+### Installation
 
-3. Start the server:
-```bash
-npm start
-```
+1. **Install dependencies**
+   ```bash
+   npm install
+   ```
 
-## API Endpoints
+2. **Environment setup**
+   Create `.env` file:
+   ```env
+   PORT=3000
+   MONGODB_URI=mongodb://localhost:27017/ramenxpress
+   JWT_SECRET=your_jwt_secret_key_here
+   NODE_ENV=development
+   ```
 
-### Inventory Management
+3. **Start server**
+   ```bash
+   npm start
+   ```
 
-#### Get All Inventory Items
-- **GET** `/api/inventory`
-- **Response**: List of all inventory items
-```json
-[
-  {
-    "name": "Noodles",
-    "stocks": 100,
-    "units": "kg",
-    "restocked": "2024-03-20T10:00:00.000Z",
-    "status": "in stock"
-  }
-]
-```
+## 📱 Features
 
-#### Add New Inventory Item
-- **POST** `/api/inventory`
-- **Body**:
-```json
-{
-  "name": "Noodles",
-  "stocks": 100,
-  "units": "kg",
-  "status": "in stock"
-}
-```
+### Authentication & Authorization
+- JWT-based authentication
+- Role-based access control (Admin, Cashier, Customer)
+- Password hashing with bcrypt
+- Token validation middleware
 
-#### Update Inventory Quantity
-- **PATCH** `/api/inventory/:id/quantity`
-- **Body**:
-```json
-{
-  "quantity": 50
-}
-```
+### Real-time Communication
+- WebSocket integration with Socket.io
+- Live order status updates
+- Payment status notifications
+- Order cancellation alerts
 
-#### Edit Inventory Item
-- **PUT** `/api/inventory/:id`
-- **Body**:
-```json
-{
-  "name": "Noodles",
-  "stocks": 150,
-  "units": "kg",
-  "status": "in stock"
-}
-```
+### Data Management
+- MongoDB with Mongoose ODM
+- Optimized database queries
+- Data validation and sanitization
+- File upload handling
 
-#### Delete Inventory Item
-- **DELETE** `/api/inventory/:id`
+### API Features
+- RESTful API design
+- Comprehensive error handling
+- Request validation
+- Pagination support
+- Filtering and sorting
+
+## 📡 API Endpoints
+
+### Authentication
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/auth/login` | User login | No |
+| POST | `/api/auth/register` | User registration | No |
 
 ### Menu Management
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/menu` | Get all menu items | Yes |
+| GET | `/api/menu/category/:category` | Get menu by category | Yes |
+| POST | `/api/menu` | Create menu item | Yes (Admin) |
+| PUT | `/api/menu/:id` | Update menu item | Yes (Admin) |
+| DELETE | `/api/menu/:id` | Delete menu item | Yes (Admin) |
 
-#### Get All Menu Items
-- **GET** `/api/menu`
-- **Response**: List of all menu items sorted by category and name
-```json
-[
-  {
-    "name": "Tonkotsu Ramen",
-    "price": 12.99,
-    "category": "ramen",
-    "ingredients": [
-      {
-        "inventoryItem": "Noodles",
-        "quantity": 200
-      },
-      {
-        "inventoryItem": "Broth",
-        "quantity": 500
-      }
-    ]
-  }
-]
-```
+### Inventory Management
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/inventory` | Get all inventory items | Yes |
+| POST | `/api/inventory` | Add inventory item | Yes (Admin) |
+| PUT | `/api/inventory/:id` | Update inventory item | Yes (Admin) |
+| PATCH | `/api/inventory/:id/quantity` | Update quantity | Yes |
+| DELETE | `/api/inventory/:id` | Delete inventory item | Yes (Admin) |
 
-#### Get Menu Items by Category
-- **GET** `/api/menu/category/:category`
-- **Response**: List of menu items in the specified category
-- **Categories Available**:
-  - ramen
-  - rice bowls
-  - side dishes
-  - sushi
-  - party trays
-  - add-ons
-  - drinks
-
-#### Create New Menu Item
-- **POST** `/api/menu`
-- **Body**:
-```json
-{
-  "name": "test Ramen",
-  "price": 350,
-  "category": "ramen",
-  "image": "imagesPATH",
-  "ingredients": [
-    { "inventoryItem": "Noodles", "quantity": 1 },
-    { "inventoryItem": "Chashu Pork", "quantity": 2 },
-    { "inventoryItem": "Ajitsuke Tamago", "quantity": 1 }
-  ]
-}
-```
-
-#### Edit Menu Item
-- **PUT** `/api/menu/:id`
-- **Body**:
-```json
-{
-  "name": "Tonkotsu Ramen",
-  "price": 13.99,
-  "category": "ramen",
-  "ingredients": [
-    {
-      "inventoryItem": "Noodles",
-      "quantity": 200
-    },
-    {
-      "inventoryItem": "Broth",
-      "quantity": 500
-    }
-  ]
-}
-```
-
-#### Delete Menu Item
-- **DELETE** `/api/menu/:id`
+### Mobile Orders
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/v1/mobile-orders/orders` | Get all orders with filtering | Yes (Cashier/Admin) |
+| GET | `/api/v1/mobile-orders/orders/:orderId` | Get order details | Yes (Cashier/Admin) |
+| PUT | `/api/v1/mobile-orders/orders/:orderId/status` | Update order status | Yes (Cashier/Admin) |
+| PUT | `/api/v1/mobile-orders/orders/:orderId/payment-status` | Update payment status | Yes (Cashier/Admin) |
+| PUT | `/api/v1/mobile-orders/orders/:orderId/cancel` | Cancel order | Yes (Cashier/Admin) |
+| GET | `/api/v1/mobile-orders/statistics` | Get order statistics | Yes (Admin) |
 
 ### Sales Management
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| POST | `/api/sales/order` | Place new order | Yes |
+| GET | `/api/sales` | Get all sales | Yes (Admin) |
+| GET | `/api/sales/range` | Get sales by date range | Yes (Admin) |
 
-#### Place Order
-- **POST** `/api/sales/order`
-- **Body**:
-```json
-{
-  "items": [
-    {
-      "menuId": "menu_id_here",
-      "quantity": 2
-    }
-  ],
-  "orderType": "dine-in",
-  "paymentMethod": "gcash"
-}
-```
+### Customer Management
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/customers` | Get all customers | Yes (Admin) |
+| GET | `/api/customers/:id` | Get customer by ID | Yes |
+| POST | `/api/customers` | Create customer | No |
+| PUT | `/api/customers/:id` | Update customer | Yes |
+| DELETE | `/api/customers/:id` | Delete customer | Yes (Admin) |
 
-#### Get All Sales
-- **GET** `/api/sales`
-- **Response**: List of all sales records sorted by date
+### Payment Methods
+| Method | Endpoint | Description | Auth Required |
+|--------|----------|-------------|---------------|
+| GET | `/api/payment-methods` | Get all payment methods | Yes |
+| POST | `/api/payment-methods` | Create payment method | Yes (Admin) |
 
-#### Get Sales by Date Range
-- **GET** `/api/sales/range`
-- **Query Parameters**:
-  - startDate: YYYY-MM-DD
-  - endDate: YYYY-MM-DD
-- **Response**: List of sales records within the date range
+## 🔄 WebSocket Events
 
-## Error Responses
+### Server Events
+| Event | Description | Data |
+|-------|-------------|------|
+| `orderStatusUpdated` | Order status changed | `{orderId, status, order}` |
+| `paymentStatusUpdated` | Payment status changed | `{orderId, paymentStatus, order}` |
+| `orderCancelled` | Order cancelled | `{orderId, reason, order}` |
+| `orderNotesUpdated` | Order notes updated | `{orderId, notes, order}` |
 
-All endpoints may return the following error responses:
+### Client Events
+| Event | Description |
+|-------|-------------|
+| `join-admin` | Join admin room for updates |
+| `join-customer` | Join customer room for updates |
 
-### 400 Bad Request
-```json
-{
-  "error": "Error message describing the issue"
-}
-```
+## 🛠️ Tech Stack
 
-### 404 Not Found
-```json
-{
-  "error": "Resource not found"
-}
-```
+- **Runtime**: Node.js
+- **Framework**: Express.js
+- **Database**: MongoDB with Mongoose
+- **Authentication**: JWT
+- **Real-time**: Socket.io
+- **Validation**: Express-validator
+- **File Upload**: Multer
 
-### 500 Server Error
-```json
-{
-  "error": "Internal server error"
-}
-```
+## 📄 License
 
-## Data Models
-
-### Inventory Item
-```javascript
-{
-  name: String,      // required
-  stocks: Number,    // required, min: 0
-  units: String,     // required
-  restocked: Date,   // default: Date.now
-  status: String     // enum: ['in stock', 'low stock', 'out of stock']
-}
-```
-
-### Menu Item
-```javascript
-{
-  name: String,      // required
-  price: Number,     // required
-  category: String,  // required, enum: ['ramen', 'rice bowls', 'side dishes', 'sushi', 'party trays', 'add-ons', 'drinks']
-  ingredients: [     // required
-    {
-      inventoryItem: String,  // required
-      quantity: Number       // required
-    }
-  ]
-}
-```
-
-### Sales Record
-```javascript
-{
-  orderId: Number,   // required, unique
-  items: [{          // required
-    name: String,    // required
-    price: Number,   // required
-    quantity: Number,// required
-    total: Number    // required
-  }],
-  total: Number,     // required
-  orderType: String, // required, enum: ['takeout', 'dine-in']
-  paymentMethod: String, // required, enum: ['gcash', 'paymaya', 'cash']
-  orderDate: Date    // default: Date.now
-}
-```
-
-## Dependencies
-
-- express: Web framework
-- mongoose: MongoDB object modeling
-- dotenv: Environment variable management
-- cors: Cross-origin resource sharing
-- bcrypt: Password hashing 
+MIT License 
